@@ -97,7 +97,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
           <BoutonPanier
             annonce={{
               annonce_id: a.id, titre: a.titre, variete: a.variete?.nom ?? null,
-              photo: a.photos?.[0] ?? null, prix: a.prix, unite: a.unite,
+              photo: a.photos?.[0] ?? null, mode: a.mode, prix: a.prix, unite: a.unite,
               quantite: 1, stock: a.quantite, vendeur_id: a.vendeur_id,
               vendeur_prenom: a.vendeur?.prenom ?? '', commune: a.commune,
               prix_ref: prixRef,

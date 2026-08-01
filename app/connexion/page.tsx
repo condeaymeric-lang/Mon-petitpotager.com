@@ -65,7 +65,7 @@ export default function Connexion() {
         </Suspense>
         <p className="tiny center" style={{ marginTop: 18 }}>
           Pas encore de compte ?{' '}
-          <Link href="/inscription" style={{ color: 'var(--leaf)', fontWeight: 600 }}>Créer un compte</Link>
+          <Link href="/inscription" style={{ color: 'var(--forest-2)', fontWeight: 600 }}>Créer un compte</Link>
         </p>
       </div>
     </div>

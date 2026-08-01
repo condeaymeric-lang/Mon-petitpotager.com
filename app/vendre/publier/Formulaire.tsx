@@ -250,10 +250,16 @@ export default function Formulaire({
       </div>
 
       <div className="field">
-        <label htmlFor="lieu">Lieu de retrait</label>
-        <select className="inp" id="lieu" value={commune} onChange={(e) => setCommune(e.target.value)}>
-          {communes.map((c) => <option key={c}>{c}</option>)}
-        </select>
+        <label id="lieu-label">Lieu de retrait</label>
+        {communes.length > 1 ? (
+          <select className="inp" aria-labelledby="lieu-label" value={commune} onChange={(e) => setCommune(e.target.value)}>
+            {communes.map((c) => <option key={c}>{c}</option>)}
+          </select>
+        ) : (
+          <p className="inp" aria-labelledby="lieu-label" style={{ color: 'var(--ink-soft)', display: 'flex', alignItems: 'center' }}>
+            {commune}
+          </p>
+        )}
       </div>
 
       <div className="field">

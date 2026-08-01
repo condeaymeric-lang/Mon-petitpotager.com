@@ -35,7 +35,7 @@ img,svg{display:block;max-width:100%}
 .btn-p:active{transform:scale(.985)}
 .btn:disabled{background:#B9C3BB!important;color:#fff!important;cursor:not-allowed;border-color:transparent}
 .btn-s{border-color:var(--line);background:var(--paper);color:var(--forest)}
-.btn-g{background:var(--leaf);color:#fff}
+.btn-g{background:var(--leaf);color:var(--forest)}
 .btn-d{color:var(--tomato);border-color:#EBCDC7;background:var(--paper)}
 .btn-sm{padding:9px 15px;font-size:.84rem;width:auto}
 .row-btn{display:flex;gap:10px}
@@ -58,7 +58,7 @@ img,svg{display:block;max-width:100%}
 .topbar-in{max-width:900px;margin:0 auto;padding:10px 16px}
 .tb-row{display:flex;align-items:center;gap:10px}
 .brand{display:flex;align-items:center;gap:7px;font-family:'Bricolage Grotesque';font-weight:800;font-size:.98rem;color:var(--forest);letter-spacing:-.03em}
-.brand i{font-style:normal;color:var(--leaf)}
+.brand i{font-style:normal;color:var(--forest-2)}
 .loc{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 11px;max-width:54%}
 .loc b{color:var(--forest);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mode-sw{display:flex;gap:3px;background:#E9E6D9;border-radius:999px;padding:3px;margin-top:9px}
@@ -92,7 +92,7 @@ img,svg{display:block;max-width:100%}
 .thumb .tag2{position:absolute;top:8px;right:8px}
 .item-b{padding:11px 12px 13px;flex:1;display:flex;flex-direction:column}
 .item-b h4{font-size:.87rem;line-height:1.25}
-.vari{font-size:.74rem;color:var(--leaf);font-weight:600;margin-top:2px}
+.vari{font-size:.74rem;color:var(--forest-2);font-weight:600;margin-top:2px}
 .price{font-family:'Bricolage Grotesque';font-weight:800;color:var(--forest);font-size:1.01rem;margin-top:5px}
 .price small{font-size:.72rem;font-weight:400;color:var(--ink-soft)}
 .strike{font-size:.72rem;color:var(--ink-soft);text-decoration:line-through;margin-left:5px}
@@ -151,7 +151,7 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 
 .gauge{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-l);padding:18px}
 .gauge-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px}
-.gauge-top span{font-size:.7rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--leaf)}
+.gauge-top span{font-size:.7rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--forest-2)}
 .gauge.wait .gauge-top span{color:var(--bark)}
 .gauge-top b{font-family:'Bricolage Grotesque';font-size:1rem;font-weight:800;color:var(--forest);font-variant-numeric:tabular-nums;white-space:nowrap}
 .gauge-bar{height:9px;border-radius:99px;background:#EDEBE0;overflow:hidden}
@@ -170,7 +170,7 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .sum-row{display:flex;justify-content:space-between;padding:7px 0;font-size:.89rem;color:var(--ink-soft)}
 .sum-row.total{border-top:1px solid var(--line);margin-top:8px;padding-top:13px;font-size:1.04rem;color:var(--ink)}
 .sum-row.total b{font-family:'Bricolage Grotesque';font-size:1.34rem;font-weight:800;color:var(--forest)}
-.sum-row.disc{color:var(--leaf)}
+.sum-row.disc{color:var(--forest-2)}
 .track{display:grid;margin-top:14px}
 .tstep{display:flex;gap:12px;padding-bottom:16px;position:relative}
 .tstep:last-child{padding-bottom:0}
@@ -191,7 +191,7 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .stats b{font-family:'Bricolage Grotesque';font-size:1.45rem;display:block;font-weight:800}
 .pts-log{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:.86rem}
 .pts-log:last-child{border-bottom:0}
-.pts-log b{font-family:'Bricolage Grotesque';color:var(--leaf);font-weight:800}
+.pts-log b{font-family:'Bricolage Grotesque';color:var(--forest-2);font-weight:800}
 .pts-log b.neg{color:var(--tomato)}
 
 .why{display:grid;gap:12px}
@@ -205,7 +205,7 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .crow:last-child{border-bottom:0}
 .crow span{color:rgba(255,255,255,.72)}
 .crow b{font-family:'Bricolage Grotesque';font-weight:800}
-.crow b.good{color:var(--leaf-line)}
+.crow b.good{color:var(--forest-2)}
 
 .empty{text-align:center;padding:44px 20px}
 .empty .e-ico{margin:0 auto 12px;width:56px}

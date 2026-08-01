@@ -77,6 +77,7 @@ export interface LignePanier {
   titre: string;
   variete: string | null;
   photo: string | null;
+  mode: ModeTransaction;
   prix: number;
   unite: string;
   quantite: number;

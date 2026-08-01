@@ -50,7 +50,7 @@ export default async function MesVentes() {
                       new Date(l.commande.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </span>
                 </span>
-                <b style={{ color: l.verse ? 'var(--leaf)' : 'var(--ink-soft)' }}>
+                <b style={{ color: l.verse ? 'var(--forest-2)' : 'var(--ink-soft)' }}>
                   {eur(l.prix_unitaire * l.quantite)}
                 </b>
               </div>
