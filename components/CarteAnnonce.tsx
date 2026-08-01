@@ -29,6 +29,7 @@ export default function CarteAnnonce({
             : <>{eur(a.prix)} <small>/ {a.unite}</small></>}
           {eco && <span className="strike">{eur(a.prix_ref!)}</span>}
         </p>
+        <p className="vendeur">{a.vendeur_prenom}</p>
         <div className="item-meta"><span>{a.commune}</span><span>{a.distance_km} km</span></div>
       </div>
     </Link>

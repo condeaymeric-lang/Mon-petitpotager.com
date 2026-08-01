@@ -96,6 +96,7 @@ img,svg{display:block;max-width:100%}
 .price{font-family:'Bricolage Grotesque';font-weight:800;color:var(--forest);font-size:1.01rem;margin-top:5px}
 .price small{font-size:.72rem;font-weight:400;color:var(--ink-soft)}
 .strike{font-size:.72rem;color:var(--ink-soft);text-decoration:line-through;margin-left:5px}
+.vendeur{font-size:.72rem;color:var(--ink-soft);margin-top:4px}
 .item-meta{font-size:.71rem;color:var(--ink-soft);margin-top:auto;padding-top:8px;display:flex;gap:8px;flex-wrap:wrap}
 
 .field{margin-bottom:15px}
