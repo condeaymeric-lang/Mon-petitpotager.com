@@ -1,0 +1,53 @@
+import { creerClientServeur } from '@/lib/supabase-server';
+import { redirect } from 'next/navigation';
+import type { Profil, Secteur, AnnonceProche } from '@/lib/types';
+
+/** Profil + secteur de l'utilisateur connecté. Redirige si non connecté. */
+export async function profilCourant() {
+  const sb = creerClientServeur();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) redirect('/connexion');
+
+  const { data: profil } = await sb
+    .from('profils')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle<Profil>();
+
+  if (!profil) redirect('/inscription');
+
+  let secteur: Secteur | null = null;
+  if (profil.secteur) {
+    const { data } = await sb
+      .from('secteurs').select('*')
+      .eq('code_insee', profil.secteur).maybeSingle<Secteur>();
+    secteur = data;
+  }
+
+  return { user, profil, secteur, sb };
+}
+
+/** Annonces dans le rayon, via la fonction SQL PostGIS. */
+export async function annoncesAutour(
+  lat: number, lon: number, rayonKm: number, categorie?: string
+) {
+  const sb = creerClientServeur();
+  const { data, error } = await sb.rpc('annonces_autour', {
+    p_lat: lat, p_lon: lon, p_rayon_km: rayonKm,
+    p_categorie: categorie ?? null, p_limite: 60,
+  });
+  if (error) {
+    console.error('annonces_autour:', error.message);
+    return [] as AnnonceProche[];
+  }
+  return (data ?? []) as AnnonceProche[];
+}
+
+export async function catalogue() {
+  const sb = creerClientServeur();
+  const [{ data: produits }, { data: varietes }] = await Promise.all([
+    sb.from('produits').select('*').order('categorie'),
+    sb.from('varietes').select('*').order('nom'),
+  ]);
+  return { produits: produits ?? [], varietes: varietes ?? [] };
+}
