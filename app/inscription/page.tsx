@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
 import { Logo } from '@/components/Illustrations';
-import { SEUIL_OUVERTURE, RAYON_DEFAUT, distanceKm } from '@/lib/utils';
+import { SEUIL_OUVERTURE, RAYON_DEFAUT, distanceKm, compresserImage } from '@/lib/utils';
 import type { Role } from '@/lib/types';
 
 const Carte = dynamic(() => import('@/components/Carte'), {
@@ -47,6 +47,24 @@ export default function Inscription() {
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [confirme, setConfirme] = useState(false);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null);
+  const [avatarEnvoi, setAvatarEnvoi] = useState(false);
+  const fichierAvatar = useRef<HTMLInputElement>(null);
+
+  async function choisirAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setAvatarEnvoi(true);
+    try {
+      const blob = await compresserImage(f, 480, 0.8);
+      setAvatar(URL.createObjectURL(blob));
+      setAvatarBlob(blob);
+    } catch {
+      setErreur('Photo illisible, essayez-en une autre.');
+    }
+    setAvatarEnvoi(false);
+  }
 
   useEffect(() => {
     fetch(`${GEO}/regions?fields=nom,code`)
@@ -157,9 +175,18 @@ export default function Inscription() {
 
     // le trigger SQL a créé le profil : on complète le secteur
     if (data.user) {
+      let avatar_url: string | undefined;
+      if (avatarBlob) {
+        const chemin = `${data.user.id}/avatar-${Date.now()}.jpg`;
+        const { error: errPhoto } = await sb.storage.from('photos')
+          .upload(chemin, avatarBlob, { contentType: 'image/jpeg', upsert: true });
+        if (!errPhoto) avatar_url = sb.storage.from('photos').getPublicUrl(chemin).data.publicUrl;
+      }
+
       await sb.from('profils').update({
         prenom, role, secteur: commune.code, rayon_km: RAYON_DEFAUT,
         cgu_acceptees_le: new Date().toISOString(),
+        ...(avatar_url ? { avatar_url } : {}),
       }).eq('id', data.user.id);
 
       // chaque inscrit rejoint automatiquement la liste d'attente de son secteur
@@ -289,6 +316,26 @@ export default function Inscription() {
         <p className="lede">Dernière étape.</p>
         {dots}
         <form onSubmit={creerCompte}>
+          <div className="field" style={{ display: 'flex', justifyContent: 'center' }}>
+            <button type="button" onClick={() => fichierAvatar.current?.click()}
+              style={{
+                width: 84, height: 84, borderRadius: '50%', overflow: 'hidden',
+                border: '1.5px dashed var(--line)', display: 'grid', placeItems: 'center',
+                background: 'var(--paper)', flexDirection: 'column', gap: 4,
+              }}>
+              {avatar ? (
+                <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span className="tiny" style={{ textAlign: 'center', padding: 6 }}>
+                  {avatarEnvoi ? '…' : 'Ajouter une photo'}
+                </span>
+              )}
+            </button>
+            <input ref={fichierAvatar} type="file" accept="image/*" hidden onChange={choisirAvatar} />
+          </div>
+          <p className="tiny center" style={{ marginTop: -8, marginBottom: 14 }}>
+            Optionnel — les acheteurs verront qui vend.
+          </p>
           <div className="field">
             <label htmlFor="pr">Votre prénom</label>
             <input className="inp" id="pr" required value={prenom}

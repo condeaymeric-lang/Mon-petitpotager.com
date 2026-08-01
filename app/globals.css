@@ -96,7 +96,9 @@ img,svg{display:block;max-width:100%}
 .price{font-family:'Bricolage Grotesque';font-weight:800;color:var(--forest);font-size:1.01rem;margin-top:5px}
 .price small{font-size:.72rem;font-weight:400;color:var(--ink-soft)}
 .strike{font-size:.72rem;color:var(--ink-soft);text-decoration:line-through;margin-left:5px}
-.vendeur{font-size:.72rem;color:var(--ink-soft);margin-top:4px}
+.vendeur{font-size:.72rem;color:var(--ink-soft);margin-top:4px;display:flex;align-items:center;gap:5px}
+.avatar-mini{width:16px;height:16px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.avatar-mini-vide{display:grid;place-items:center;background:var(--leaf-soft);color:var(--forest-2);font-size:.6rem;font-weight:700}
 .item-meta{font-size:.71rem;color:var(--ink-soft);margin-top:auto;padding-top:8px;display:flex;gap:8px;flex-wrap:wrap}
 
 .field{margin-bottom:15px}

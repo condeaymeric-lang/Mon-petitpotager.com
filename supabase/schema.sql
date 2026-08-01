@@ -265,6 +265,7 @@ create index if not exists idx_avis_vendeur on avis (vendeur_id);
 -- ═══════════════════════════════════════════════════════════════
 --  RECHERCHE D'ANNONCES DANS UN RAYON  (le cœur du produit)
 -- ═══════════════════════════════════════════════════════════════
+drop function if exists annonces_autour(double precision, double precision, int, text, int);
 create or replace function annonces_autour(
   p_lat double precision,
   p_lon double precision,
@@ -277,7 +278,7 @@ returns table (
   prix numeric, unite text, quantite int, commune text,
   photos text[], categorie text, produit text, variete text,
   prix_ref numeric, distance_km numeric,
-  vendeur_prenom text, vendeur_pro boolean, vendeur_id uuid,
+  vendeur_prenom text, vendeur_pro boolean, vendeur_id uuid, vendeur_avatar text,
   created_at timestamptz
 ) as $$
   select
@@ -286,7 +287,7 @@ returns table (
     a.photos, p.categorie, p.nom, v.nom,
     p.prix_ref,
     round((st_distance(a.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
-    pr.prenom, pr.pro_verifie, pr.id,
+    pr.prenom, pr.pro_verifie, pr.id, pr.avatar_url,
     a.created_at
   from annonces a
   join profils pr on pr.id = a.vendeur_id

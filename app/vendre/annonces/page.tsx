@@ -41,6 +41,7 @@ export default async function MesAnnonces() {
               </div>
               <div className="row-btn" style={{ marginTop: 14 }}>
                 <Link className="btn btn-s btn-sm" style={{ flex: 1 }} href={`/annonce/${a.id}`}>Voir</Link>
+                <Link className="btn btn-s btn-sm" style={{ flex: 1 }} href={`/vendre/annonces/${a.id}/modifier`}>Modifier</Link>
                 <BoutonRetirer id={a.id} />
               </div>
             </div>
