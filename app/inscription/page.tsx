@@ -207,7 +207,7 @@ export default function Inscription() {
   if (confirme) {
     return (
       <div className="onb"><PanneauMarque /><div className="onb-in">
-        <div className="brand" style={{ fontSize: '1.1rem' }}><Logo size={29} />mon<i>petit</i>potager</div>
+        <div className="brand" style={{ fontSize: '1.7rem' }}><Logo size={29} />mon<i>petit</i>potager</div>
         <h1>Vérifiez vos e-mails.</h1>
         <p className="lede">Un lien de confirmation a été envoyé à {email}. Cliquez dessus pour activer votre compte.</p>
         <Link href="/connexion" className="btn btn-s">Retour à la connexion</Link>
@@ -217,7 +217,7 @@ export default function Inscription() {
 
   return (
     <div className="onb"><PanneauMarque /><div className="onb-in">
-      <div className="brand" style={{ fontSize: '1.1rem' }}><Logo size={29} />mon<i>petit</i>potager</div>
+      <div className="brand" style={{ fontSize: '1.7rem' }}><Logo size={29} />mon<i>petit</i>potager</div>
 
       {etape === 0 && (<>
         <h1>Où est votre secteur ?</h1>

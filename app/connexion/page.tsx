@@ -57,7 +57,7 @@ export default function Connexion() {
     <div className="onb">
       <PanneauMarque />
       <div className="onb-in">
-        <div className="brand" style={{ fontSize: '1.1rem' }}>
+        <div className="brand" style={{ fontSize: '1.7rem' }}>
           <Logo size={29} />mon<i>petit</i>potager
         </div>
         <h1>Content de vous revoir.</h1>

@@ -6,7 +6,7 @@ export function PanneauMarque() {
   return (
     <div className="onb-marque">
       <div className="onb-marque-in">
-        <div className="brand" style={{ fontSize: '1.25rem' }}>
+        <div className="brand" style={{ fontSize: '2.1rem' }}>
           <Logo size={32} />mon<i>petit</i>potager
         </div>
         <p className="onb-tagline">Cultivons le bon. Partageons le meilleur.</p>

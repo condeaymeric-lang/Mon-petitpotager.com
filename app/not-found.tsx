@@ -5,7 +5,7 @@ export default function IntrouvableGlobal() {
   return (
     <div className="onb">
       <div className="onb-in">
-        <div className="brand" style={{ fontSize: '1.1rem' }}>
+        <div className="brand" style={{ fontSize: '1.7rem' }}>
           <Logo size={29} />mon<i>petit</i>potager
         </div>
         <div className="empty" style={{ marginTop: 24 }}>
