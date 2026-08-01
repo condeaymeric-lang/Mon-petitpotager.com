@@ -27,7 +27,7 @@ export default async function Commandes() {
   return (
     <>
       <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />
-      <div className="app has-tabbar"><div className="page">
+      <div className="app has-tabbar"><div className="page page-form">
         {commandes?.length ? (<>
           <div className="page-head">
             <h1>Mes commandes</h1>

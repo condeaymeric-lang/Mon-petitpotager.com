@@ -21,7 +21,7 @@ export default async function PageCommande({ params }: { params: { id: string } 
   return (
     <>
       <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />
-      <div className="app has-tabbar"><div className="page">
+      <div className="app has-tabbar"><div className="page page-form">
         <Link href="/commandes" className="back">← Retour</Link>
         <div className="page-head">
           <h1>{c.reference}</h1>

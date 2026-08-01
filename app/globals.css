@@ -276,6 +276,11 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
   .dash-top .stats{height:100%;align-items:center}
   .annonces-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
   .annonces-grid .card{margin-top:0}
+
+  /* Fiche annonce : photo et informations côte à côte, comme une vraie
+     page produit, plutôt qu'empilées sur toute la hauteur de l'écran. */
+  .produit-layout{display:grid;grid-template-columns:1fr 1fr;gap:36px;max-width:960px;margin:0 auto}
+  .produit-media{position:sticky;top:96px;align-self:start}
 }
 
 @media(min-width:640px){
