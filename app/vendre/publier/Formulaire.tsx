@@ -102,7 +102,7 @@ export default function Formulaire({
   // ── Étape 1 : le produit ──
   if (etape === 0) {
     return (
-      <div className="page">
+      <div className="page page-form">
         <div className="page-head">
           <h1>Que proposez-vous ?</h1>
           <p>Choisissez le produit, la variété vient ensuite.</p>
@@ -129,7 +129,7 @@ export default function Formulaire({
   // ── Étape 2 : la variété ──
   if (etape === 1 && produit) {
     return (
-      <div className="page">
+      <div className="page page-form">
         <button className="back" onClick={() => setEtape(0)}>← Changer de produit</button>
         <div className="page-head">
           <h1>Quelle variété de {produit.nom.toLowerCase()} ?</h1>
@@ -180,7 +180,7 @@ export default function Formulaire({
   const ecart = ref - pNum;
 
   return (
-    <div className="page">
+    <div className="page page-form">
       <button className="back" onClick={() => setEtape(1)}>← Changer de variété</button>
       <div className="page-head">
         <h1>{produit.nom} — {variete.nom}</h1>

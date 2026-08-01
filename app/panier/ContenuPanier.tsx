@@ -126,7 +126,7 @@ export default function ContenuPanier({
 
   if (!lignes.length) {
     return (
-      <div className="page"><div className="empty">
+      <div className="page page-form"><div className="empty">
         <Illustration nom="plant" className="e-ico" />
         <h3>Votre panier est vide</h3>
         <p>Composez un panier auprès de plusieurs voisins : vous ne paierez et ne vous déplacerez qu'une fois.</p>
@@ -136,7 +136,7 @@ export default function ContenuPanier({
   }
 
   return (
-    <div className="page">
+    <div className="page page-form">
       <div className="page-head">
         <h1>Mon panier</h1>
         <p>

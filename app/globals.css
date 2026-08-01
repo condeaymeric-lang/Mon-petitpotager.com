@@ -262,6 +262,12 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 
   .feed{grid-template-columns:repeat(4,1fr)}
   .cat-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+
+  /* Un formulaire ne devient pas plus lisible en s'étirant sur 1080px :
+     les écrans d'inscription, de publication et de panier restent dans
+     une colonne confortable, centrée. */
+  .page-form{max-width:600px;margin:0 auto}
+  .page-form .cat-grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
 }
 
 @media(min-width:640px){
