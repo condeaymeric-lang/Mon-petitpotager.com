@@ -396,15 +396,15 @@ create policy creation_avis on avis for insert
 -- ═══════════════════════════════════════════════════════════════
 create or replace function gerer_nouvel_utilisateur() returns trigger as $$
 begin
-  insert into profils (id, prenom, role)
+  insert into public.profils (id, prenom, role)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'prenom', split_part(new.email, '@', 1)),
-    coalesce((new.raw_user_meta_data->>'role')::role_user, 'amateur')
+    coalesce((new.raw_user_meta_data->>'role')::public.role_user, 'amateur')
   )
   on conflict (id) do nothing;
   return new;
-end $$ language plpgsql security definer;
+end $$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists trg_nouvel_utilisateur on auth.users;
 create trigger trg_nouvel_utilisateur after insert on auth.users
