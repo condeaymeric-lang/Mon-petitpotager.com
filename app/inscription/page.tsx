@@ -133,7 +133,7 @@ export default function Inscription() {
       code_insee: commune.code, nom: commune.nom,
       departement: commune.code.slice(0, 2),
       population: commune.population ?? 0, lat, lon,
-    }, { onConflict: 'code_insee' });
+    }, { onConflict: 'code_insee', ignoreDuplicates: true });
 
     const { data, error } = await sb.auth.signUp({
       email, password: mdp,

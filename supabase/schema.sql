@@ -321,6 +321,11 @@ alter table varietes           enable row level security;
 -- Catalogue et secteurs : lecture publique
 drop policy if exists lecture_secteurs on secteurs;
 create policy lecture_secteurs on secteurs for select using (true);
+-- Un nouvel inscrit peut créer son secteur (commune) s'il n'existe pas encore,
+-- mais ne peut pas se faire passer pour un secteur déjà ouvert ou peuplé.
+drop policy if exists creation_secteur on secteurs;
+create policy creation_secteur on secteurs for insert
+  with check (ouvert = false and membres = 0 and attente = 0);
 drop policy if exists lecture_produits on produits;
 create policy lecture_produits on produits for select using (true);
 drop policy if exists lecture_varietes on varietes;
