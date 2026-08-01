@@ -19,22 +19,53 @@ const ONGLETS = {
   ],
 };
 
+function Icone({ d, taille = 21 }: { d: string; taille?: number }) {
+  return (
+    <svg width={taille} height={taille} viewBox="0 0 24 24">
+      <path d={d} />
+    </svg>
+  );
+}
+
 export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: number }) {
   const path = usePathname();
   const router = useRouter();
+  const { nbArticles } = usePanier();
   const modeVendre = path.startsWith('/vendre');
+  const onglets = modeVendre ? ONGLETS.vendre : ONGLETS.acheter;
+  const publier = modeVendre ? '/vendre/publier' : '/vendre';
 
   return (
     <div className="topbar">
       <div className="topbar-in">
         <div className="tb-row">
           <div className="brand"><Logo size={25} />mon<i>petit</i>potager</div>
-          <Link href="/profil" className="loc">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6FA83A" strokeWidth="2.2">
-              <path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z" /><circle cx="12" cy="10" r="3" />
-            </svg>
-            <b>{commune} · {rayonKm} km</b>
-          </Link>
+
+          <nav className="dsk-nav" aria-label="Navigation principale">
+            {onglets.filter((o) => o.cle !== 'profil').map((o) => {
+              const actif = o.href === '/' ? path === '/' : path.startsWith(o.href);
+              return (
+                <Link key={o.cle} href={o.href} className={actif ? 'on' : ''}>
+                  <Icone d={o.d} taille={17} />
+                  {o.label}
+                  {o.cle === 'panier' && nbArticles > 0 && <span className="dsk-badge">{nbArticles}</span>}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="tb-right">
+            <Link href={publier} className="dsk-publier">
+              <svg width="16" height="16" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+              {modeVendre ? 'Publier' : 'Vendre'}
+            </Link>
+            <Link href="/profil" className="loc">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6FA83A" strokeWidth="2.2">
+                <path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z" /><circle cx="12" cy="10" r="3" />
+              </svg>
+              <b>{commune} · {rayonKm} km</b>
+            </Link>
+          </div>
         </div>
         <div className="mode-sw">
           <button className={!modeVendre ? 'on' : ''} onClick={() => router.push('/')}>J'achète</button>
@@ -68,7 +99,7 @@ export function BarreBas() {
   };
 
   return (
-    <nav className="tabbar">
+    <nav className="tabbar" aria-label="Navigation principale (mobile)">
       {onglets.slice(0, moitie).map(lien)}
       <Link href={fab} className="fab" aria-label={modeVendre ? 'Publier une annonce' : "Pourquoi l'application"}>
         <i><svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></i>

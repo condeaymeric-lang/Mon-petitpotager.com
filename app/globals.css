@@ -59,12 +59,16 @@ img,svg{display:block;max-width:100%}
 .tb-row{display:flex;align-items:center;gap:10px}
 .brand{display:flex;align-items:center;gap:7px;font-family:'Bricolage Grotesque';font-weight:800;font-size:.98rem;color:var(--forest);letter-spacing:-.03em}
 .brand i{font-style:normal;color:var(--forest-2)}
-.loc{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 11px;max-width:54%}
+.loc{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 11px;max-width:54%;flex-shrink:0}
 .loc b{color:var(--forest);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mode-sw{display:flex;gap:3px;background:#E9E6D9;border-radius:999px;padding:3px;margin-top:9px}
 .mode-sw button{flex:1;padding:8px 10px;border-radius:999px;font-size:.85rem;font-weight:600;color:var(--ink-soft);transition:.18s}
 .mode-sw button.on{background:var(--paper);color:var(--forest);box-shadow:var(--sh)}
 .mode-sw button.on.sell{background:var(--forest);color:#fff}
+
+.dsk-nav{display:none}
+.dsk-publier{display:none}
+.tb-right{display:flex;align-items:center;gap:10px;margin-left:auto}
 
 .tabbar{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--paper);border-top:1px solid var(--line);display:flex;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
 .tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;color:var(--ink-soft);font-size:.65rem;font-weight:500;position:relative}
@@ -228,3 +232,32 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
 @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation:none!important}}
+
+/* ── Écrans larges : navigation horizontale, la barre d'onglets du bas
+   devient redondante et s'efface. ── */
+@media(min-width:880px){
+  .app,.topbar-in{max-width:1080px}
+  .tb-row{gap:22px}
+  .mode-sw{display:none}
+  .dsk-nav{display:flex;align-items:center;gap:4px}
+  .dsk-nav a{display:flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;font-size:.87rem;font-weight:600;color:var(--ink-soft);position:relative;transition:.15s}
+  .dsk-nav a svg{stroke:var(--ink-soft);stroke-width:1.9;fill:none}
+  .dsk-nav a:hover{background:var(--leaf-soft);color:var(--forest)}
+  .dsk-nav a.on{background:var(--leaf-soft);color:var(--forest)}
+  .dsk-nav a.on svg{stroke:var(--forest)}
+  .dsk-badge{position:absolute;top:3px;right:5px;min-width:15px;height:15px;border-radius:8px;background:var(--tomato);color:#fff;font-size:.6rem;font-weight:700;display:grid;place-items:center;padding:0 4px}
+  .dsk-publier{display:flex;align-items:center;gap:6px;padding:9px 16px;border-radius:999px;background:var(--forest);color:#fff;font-size:.85rem;font-weight:600;flex-shrink:0}
+  .dsk-publier:hover{background:var(--forest-2)}
+  .dsk-publier svg{stroke:#fff;stroke-width:2.4}
+  .loc{max-width:none}
+
+  .tabbar{display:none}
+  .has-tabbar{padding-bottom:0}
+
+  .feed{grid-template-columns:repeat(4,1fr)}
+  .cat-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+}
+
+@media(min-width:640px){
+  .btn,.seg button,.qty button,.fchip,.cat-btn,.var-btn{cursor:pointer}
+}
