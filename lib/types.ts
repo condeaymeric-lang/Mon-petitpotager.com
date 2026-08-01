@@ -19,6 +19,8 @@ export interface Profil {
   id: string;
   prenom: string;
   nom: string | null;
+  telephone: string | null;
+  bio: string | null;
   role: Role;
   secteur: string | null;
   rayon_km: number;

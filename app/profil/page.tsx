@@ -3,6 +3,7 @@ import { profilCourant } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import { eur, SEUIL_OUVERTURE } from '@/lib/utils';
 import PanneauProfil from './PanneauProfil';
+import ModifierProfil from './ModifierProfil';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,12 +24,22 @@ export default async function Profil() {
     <>
       <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />
       <div className="app has-tabbar"><div className="page">
-        <div className="page-head">
-          <h1>{profil.prenom}</h1>
-          <p>
-            {profil.role === 'pro' ? 'Producteur pro' : profil.role === 'amateur' ? 'Jardinier amateur' : 'Acheteur'}
-            {secteur && ` · ${secteur.nom}`}
-          </p>
+        <div className="page-head" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {profil.avatar_url ? (
+            <img src={profil.avatar_url} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          ) : (
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center',
+              background: 'var(--leaf-soft)', color: 'var(--forest-2)', fontWeight: 700, fontSize: '1.3rem',
+            }}>{profil.prenom?.[0]?.toUpperCase()}</div>
+          )}
+          <div>
+            <h1>{profil.prenom}</h1>
+            <p>
+              {profil.role === 'pro' ? 'Producteur pro' : profil.role === 'amateur' ? 'Jardinier amateur' : 'Acheteur'}
+              {secteur && ` · ${secteur.nom}`}
+            </p>
+          </div>
         </div>
 
         <div className="pts-card">
@@ -45,6 +56,7 @@ export default async function Profil() {
           </div>
         </div>
 
+        <ModifierProfil profil={profil} />
         <PanneauProfil profil={profil} secteur={secteur} />
 
         <div className="card">
