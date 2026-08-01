@@ -161,6 +161,11 @@ export default function Inscription() {
         prenom, role, secteur: commune.code, rayon_km: RAYON_DEFAUT,
         cgu_acceptees_le: new Date().toISOString(),
       }).eq('id', data.user.id);
+
+      // chaque inscrit rejoint automatiquement la liste d'attente de son secteur
+      await sb.from('liste_attente').insert({
+        secteur: commune.code, email, profil_id: data.user.id,
+      });
     }
 
     if (data.session) { router.push('/'); router.refresh(); }
