@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
 import { Logo } from '@/components/Illustrations';
+import { PanneauMarque } from '@/components/PanneauMarque';
 import { SEUIL_OUVERTURE, RAYON_DEFAUT, distanceKm, compresserImage } from '@/lib/utils';
 import type { Role } from '@/lib/types';
 
@@ -205,7 +206,7 @@ export default function Inscription() {
 
   if (confirme) {
     return (
-      <div className="onb"><div className="onb-in">
+      <div className="onb"><PanneauMarque /><div className="onb-in">
         <div className="brand" style={{ fontSize: '1.1rem' }}><Logo size={29} />mon<i>petit</i>potager</div>
         <h1>Vérifiez vos e-mails.</h1>
         <p className="lede">Un lien de confirmation a été envoyé à {email}. Cliquez dessus pour activer votre compte.</p>
@@ -215,7 +216,7 @@ export default function Inscription() {
   }
 
   return (
-    <div className="onb"><div className="onb-in">
+    <div className="onb"><PanneauMarque /><div className="onb-in">
       <div className="brand" style={{ fontSize: '1.1rem' }}><Logo size={29} />mon<i>petit</i>potager</div>
 
       {etape === 0 && (<>

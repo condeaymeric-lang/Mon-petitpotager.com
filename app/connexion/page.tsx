@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
 import { Logo } from '@/components/Illustrations';
+import { PanneauMarque } from '@/components/PanneauMarque';
 
 function Formulaire() {
   const [email, setEmail] = useState('');
@@ -54,6 +55,7 @@ function Formulaire() {
 export default function Connexion() {
   return (
     <div className="onb">
+      <PanneauMarque />
       <div className="onb-in">
         <div className="brand" style={{ fontSize: '1.1rem' }}>
           <Logo size={29} />mon<i>petit</i>potager
