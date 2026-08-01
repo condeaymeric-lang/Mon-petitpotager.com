@@ -14,7 +14,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
   const { data: a } = await sb
     .from('annonces')
     .select(`*, vendeur:profils!annonces_vendeur_id_fkey(id, prenom, pro_verifie),
-             produit:produits(nom, categorie, prix_ref, mois_saison),
+             produit:produits(nom, categorie, prix_ref, mois_saison, illustration),
              variete:varietes(nom, description, illustration)`)
     .eq('id', params.id)
     .maybeSingle();
@@ -37,7 +37,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
         <div className="thumb" style={{ aspectRatio: '1.7', borderRadius: 'var(--r-l)', overflow: 'hidden' }}>
           {a.photos?.[0]
             ? <img src={a.photos[0]} alt={a.titre} />
-            : <Illustration nom={a.variete?.illustration} />}
+            : <Illustration nom={a.variete?.illustration ?? a.produit?.illustration} />}
         </div>
 
         {a.photos?.length > 1 && (

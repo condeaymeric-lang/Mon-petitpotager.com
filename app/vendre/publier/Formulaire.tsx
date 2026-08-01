@@ -154,7 +154,7 @@ export default function Formulaire({
                 if (produit.prix_ref) setPrix((produit.prix_ref * 0.7).toFixed(2));
                 setEtape(2);
               }}>
-              <div className="ill"><Illustration nom={v.illustration} /></div>
+              <div className="ill"><Illustration nom={v.illustration ?? produit.illustration} /></div>
               <div><b>{v.nom}</b><span>{v.description}</span></div>
             </button>
           ))}

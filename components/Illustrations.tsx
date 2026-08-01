@@ -85,11 +85,13 @@ export function Illustration({ nom, className }: { nom?: string | null; classNam
 export function Logo({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <circle cx="20" cy="20" r="20" fill="#EFF6E8" />
-      <circle cx="27" cy="13" r="4.2" fill="#F2B33D" />
-      <path d="M20 30V19.5" stroke="#2E5233" strokeWidth="2.6" strokeLinecap="round" />
-      <path d="M20 22c0-5.2 4.4-8.6 10-8.6.4 5.6-4.4 9.4-10 8.6Z" fill="#6FBF4E" />
-      <path d="M20 25.4c0-4.4-3.6-7.6-8.2-7.6-.3 4.6 3.6 8 8.2 7.6Z" fill="#3E8C43" />
+      <path d="M20 32V16" stroke="#143424" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M20 20c0-6 5-10 11-10 .5 6-5 10.6-11 10Z"
+        stroke="#143424" strokeWidth="2" strokeLinejoin="round" fill="none" />
+      <path d="M20 24c0-5-4-8.4-9-8.4-.4 5 4 8.9 9 8.4Z"
+        stroke="#6FA83A" strokeWidth="2" strokeLinejoin="round" fill="none" />
+      <path d="M27.5 12.4c0-1.1.9-1.9 1.9-1.6.9-.3 1.8.5 1.8 1.6 0 1.2-1.9 2.6-1.9 2.6s-1.8-1.4-1.8-2.6Z"
+        stroke="#6FA83A" strokeWidth="1.3" strokeLinejoin="round" fill="none" />
     </svg>
   );
 }

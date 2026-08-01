@@ -279,6 +279,7 @@ returns table (
   photos text[], categorie text, produit text, variete text,
   prix_ref numeric, distance_km numeric,
   vendeur_prenom text, vendeur_pro boolean, vendeur_id uuid, vendeur_avatar text,
+  illustration text,
   created_at timestamptz
 ) as $$
   select
@@ -288,6 +289,7 @@ returns table (
     p.prix_ref,
     round((st_distance(a.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
     pr.prenom, pr.pro_verifie, pr.id, pr.avatar_url,
+    coalesce(v.illustration, p.illustration),
     a.created_at
   from annonces a
   join profils pr on pr.id = a.vendeur_id

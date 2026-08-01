@@ -11,7 +11,7 @@ export default async function MesAnnonces() {
   const { profil, secteur, sb } = await profilCourant();
   const { data: annonces } = await sb
     .from('annonces')
-    .select('*, variete:varietes(nom, illustration)')
+    .select('*, produit:produits(illustration), variete:varietes(nom, illustration)')
     .eq('vendeur_id', profil.id)
     .neq('statut', 'retire')
     .order('created_at', { ascending: false });
@@ -29,7 +29,7 @@ export default async function MesAnnonces() {
             <div className="card" key={a.id}>
               <div className="line" style={{ border: 0, padding: 0 }}>
                 <div className="th">
-                  {a.photos?.[0] ? <img src={a.photos[0]} alt="" /> : <Illustration nom={a.variete?.illustration} />}
+                  {a.photos?.[0] ? <img src={a.photos[0]} alt="" /> : <Illustration nom={a.variete?.illustration ?? a.produit?.illustration} />}
                 </div>
                 <div className="line-b">
                   <h4>{a.titre}{a.variete ? ` — ${a.variete.nom}` : ''}</h4>

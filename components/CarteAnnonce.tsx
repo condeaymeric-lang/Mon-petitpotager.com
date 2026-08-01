@@ -15,7 +15,7 @@ export default function CarteAnnonce({
       <div className="thumb">
         {a.photos?.[0]
           ? <img src={a.photos[0]} alt="" loading="lazy" />
-          : <Illustration nom={a.produit?.toLowerCase()} />}
+          : <Illustration nom={a.illustration} />}
         <span className={`badge tag ${a.mode === 'troc' ? 'b-troc' : a.mode === 'don' ? 'b-don' : a.vendeur_pro ? 'b-pro' : 'b-am'}`}>
           {a.mode === 'troc' ? 'Troc' : a.mode === 'don' ? 'Don' : a.vendeur_pro ? 'Pro' : 'Voisin'}
         </span>
