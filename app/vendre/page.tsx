@@ -40,17 +40,19 @@ export default async function EspaceVendeur() {
           <p>{profil.role === 'pro' ? 'Producteur professionnel' : 'Jardinier amateur'} · {secteur?.nom}</p>
         </div>
 
-        <div className="pts-card">
-          <small>MES POINTS</small>
-          <b>{profil.points}</b>
-          <small>soit {eur(profil.points / 100)} de réduction sur vos achats</small>
-        </div>
+        <div className="dash-top">
+          <div className="pts-card">
+            <small>MES POINTS</small>
+            <b>{profil.points}</b>
+            <small>soit {eur(profil.points / 100)} de réduction sur vos achats</small>
+          </div>
 
-        <div className="card">
-          <div className="stats">
-            <div><b>{annonces.length}</b><span className="tiny">annonces</span></div>
-            <div><b>{stock}</b><span className="tiny">en stock</span></div>
-            <div><b>{vues}</b><span className="tiny">vues</span></div>
+          <div className="card">
+            <div className="stats">
+              <div><b>{annonces.length}</b><span className="tiny">annonces</span></div>
+              <div><b>{stock}</b><span className="tiny">en stock</span></div>
+              <div><b>{vues}</b><span className="tiny">vues</span></div>
+            </div>
           </div>
         </div>
 

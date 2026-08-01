@@ -268,6 +268,14 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
      une colonne confortable, centrée. */
   .page-form{max-width:600px;margin:0 auto}
   .page-form .cat-grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+
+  /* Tableaux de bord (vendeur, ventes, profil) : les indicateurs clés
+     se placent côte à côte plutôt que de s'empiler sur toute la hauteur. */
+  .dash-top{display:grid;grid-template-columns:1.1fr 2fr;gap:14px;align-items:stretch}
+  .dash-top .pts-card,.dash-top>.card{margin-top:0}
+  .dash-top .stats{height:100%;align-items:center}
+  .annonces-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .annonces-grid .card{margin-top:0}
 }
 
 @media(min-width:640px){

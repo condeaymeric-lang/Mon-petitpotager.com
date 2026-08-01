@@ -42,17 +42,19 @@ export default async function Profil() {
           </div>
         </div>
 
-        <div className="pts-card">
-          <small>MES POINTS</small>
-          <b>{profil.points}</b>
-          <small>soit {eur(profil.points / 100)} de réduction</small>
-        </div>
+        <div className="dash-top">
+          <div className="pts-card">
+            <small>MES POINTS</small>
+            <b>{profil.points}</b>
+            <small>soit {eur(profil.points / 100)} de réduction</small>
+          </div>
 
-        <div className="card">
-          <div className="stats">
-            <div><b>{nbAnnonces ?? 0}</b><span className="tiny">annonces</span></div>
-            <div><b>{nbCommandes ?? 0}</b><span className="tiny">commandes</span></div>
-            <div><b>{total}</b><span className="tiny">voisins</span></div>
+          <div className="card">
+            <div className="stats">
+              <div><b>{nbAnnonces ?? 0}</b><span className="tiny">annonces</span></div>
+              <div><b>{nbCommandes ?? 0}</b><span className="tiny">commandes</span></div>
+              <div><b>{total}</b><span className="tiny">voisins</span></div>
+            </div>
           </div>
         </div>
 

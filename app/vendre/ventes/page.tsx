@@ -30,10 +30,18 @@ export default async function MesVentes() {
           <p>Suivi de votre activité de vendeur.</p>
         </div>
 
-        <div className="pts-card">
-          <small>REVENUS CUMULÉS</small>
-          <b>{eur(ca)}</b>
-          <small>dont {eur(verse)} déjà versés après retrait</small>
+        <div className="dash-top">
+          <div className="pts-card">
+            <small>REVENUS CUMULÉS</small>
+            <b>{eur(ca)}</b>
+            <small>dont {eur(verse)} déjà versés après retrait</small>
+          </div>
+          <div className="card">
+            <div className="stats">
+              <div><b>{ventes.length}</b><span className="tiny">lignes vendues</span></div>
+              <div><b>{eur(ca - verse)}</b><span className="tiny">en attente de retrait</span></div>
+            </div>
+          </div>
         </div>
 
         {ventes.length > 0 && (
