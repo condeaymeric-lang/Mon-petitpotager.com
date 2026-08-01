@@ -215,7 +215,7 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .crow:last-child{border-bottom:0}
 .crow span{color:rgba(255,255,255,.72)}
 .crow b{font-family:'Bricolage Grotesque';font-weight:800}
-.crow b.good{color:var(--forest-2)}
+.crow b.good{color:var(--leaf-line)}
 
 .empty{text-align:center;padding:44px 20px}
 .empty .e-ico{margin:0 auto 12px;width:56px}
@@ -295,6 +295,13 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
      page produit, plutôt qu'empilées sur toute la hauteur de l'écran. */
   .produit-layout{display:grid;grid-template-columns:1fr 1fr;gap:36px;max-width:960px;margin:0 auto}
   .produit-media{position:sticky;top:96px;align-self:start}
+
+  /* La page "Pourquoi" est un vrai contenu éditorial : deux colonnes
+     de raisons et un encadré chiffré en aparté, plutôt qu'une seule
+     liste étirée sur toute la largeur. */
+  .pourquoi-layout{display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start}
+  .why{grid-template-columns:repeat(2,1fr)}
+  .pourquoi-aside{position:sticky;top:96px}
 }
 
 @media(min-width:640px){

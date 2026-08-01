@@ -40,40 +40,44 @@ export default function Pourquoi() {
         <p>Vous pourriez frapper à la porte de votre voisin. Voici ce que l'application ajoute.</p>
       </div>
 
-      <div className="why">
-        {RAISONS.map((r) => (
-          <div key={r.t} className="why-i">
-            <div className="ic">
-              <svg width="19" height="19" viewBox="0 0 24 24"><path d={r.p} /></svg>
+      <div className="pourquoi-layout">
+        <div className="why">
+          {RAISONS.map((r) => (
+            <div key={r.t} className="why-i">
+              <div className="ic">
+                <svg width="19" height="19" viewBox="0 0 24 24"><path d={r.p} /></svg>
+              </div>
+              <div><h4>{r.t}</h4><p>{r.d}</p></div>
             </div>
-            <div><h4>{r.t}</h4><p>{r.d}</p></div>
-          </div>
-        ))}
-      </div>
-
-      <div className="compare" style={{ marginTop: 14 }}>
-        <h3>Un panier type, comparé</h3>
-        {PANIER.map(([nom, prix, ref]) => (
-          <div key={nom as string}>
-            <div className="crow"><span>{nom as string}</span><b className="good">{eur(prix as number)}</b></div>
-            <div className="crow">
-              <span>En grande surface</span>
-              <b style={{ opacity: .55, textDecoration: 'line-through' }}>{eur(ref as number)}</b>
-            </div>
-          </div>
-        ))}
-        <div className="crow" style={{ paddingTop: 16 }}>
-          <span style={{ color: '#fff', fontWeight: 600 }}>Vous économisez</span>
-          <b className="good" style={{ fontSize: '1.4rem' }}>{eur(eco)}</b>
+          ))}
         </div>
-        <p className="tiny" style={{ color: 'rgba(255,255,255,.5)', marginTop: 12 }}>
-          Prix de référence indicatifs relevés en grande surface. Ils varient selon la saison et la région.
-        </p>
-      </div>
 
-      <Link className="btn btn-p" href="/" style={{ marginTop: 14 }}>
-        Voir ce qui pousse près de chez moi
-      </Link>
+        <div className="pourquoi-aside">
+          <div className="compare">
+            <h3>Un panier type, comparé</h3>
+            {PANIER.map(([nom, prix, ref]) => (
+              <div key={nom as string}>
+                <div className="crow"><span>{nom as string}</span><b className="good">{eur(prix as number)}</b></div>
+                <div className="crow">
+                  <span>En grande surface</span>
+                  <b style={{ opacity: .55, textDecoration: 'line-through' }}>{eur(ref as number)}</b>
+                </div>
+              </div>
+            ))}
+            <div className="crow" style={{ paddingTop: 16 }}>
+              <span style={{ color: '#fff', fontWeight: 600 }}>Vous économisez</span>
+              <b className="good" style={{ fontSize: '1.4rem' }}>{eur(eco)}</b>
+            </div>
+            <p className="tiny" style={{ color: 'rgba(255,255,255,.5)', marginTop: 12 }}>
+              Prix de référence indicatifs relevés en grande surface. Ils varient selon la saison et la région.
+            </p>
+          </div>
+
+          <Link className="btn btn-p" href="/" style={{ marginTop: 14 }}>
+            Voir ce qui pousse près de chez moi
+          </Link>
+        </div>
+      </div>
     </div></div>
   );
 }
