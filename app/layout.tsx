@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { ToastProvider } from '@/components/Toast';
 import { PanierProvider } from '@/components/PanierContext';
 import BandeauConstruction from '@/components/BandeauConstruction';
+import { ColonnesPub } from '@/components/EncartPub';
 
 export const metadata: Metadata = {
   title: 'monpetitpotager.com — Cultivons le bon, partageons le meilleur',
@@ -30,9 +31,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <a href="#contenu" className="saut-contenu">Aller au contenu</a>
         <BandeauConstruction />
+        <ColonnesPub />
         <ToastProvider>
-          <PanierProvider>{children}</PanierProvider>
+          <PanierProvider>
+            <div id="contenu">{children}</div>
+          </PanierProvider>
         </ToastProvider>
       </body>
     </html>

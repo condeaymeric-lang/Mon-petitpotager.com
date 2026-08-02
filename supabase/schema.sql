@@ -1229,3 +1229,176 @@ create trigger trg_composant_lot before insert or update on composants_lot
 -- Une variété libre est possible dans un panier, comme dans une annonce
 -- simple : le catalogue ne peut pas tout prévoir.
 alter table composants_lot add column if not exists variete_libre text;
+
+-- ═══════════════════════════════════════════════════════════════
+--  OUTILS DE GESTION DU PROFESSIONNEL
+--  Le vendeur professionnel ne vend pas qu'en ligne : l'essentiel de
+--  son activité se fait à la ferme, au marché, en direct. Ces tables
+--  lui servent de tenue de compte quotidienne. Elles ne remplacent
+--  pas une comptabilité légale : ce sont des relevés de suivi.
+-- ═══════════════════════════════════════════════════════════════
+
+-- ── Ventes réalisées hors du site ──
+create table if not exists ventes_directes (
+  id          uuid primary key default uuid_generate_v4(),
+  vendeur_id  uuid references profils(id) on delete cascade not null,
+  date_vente  date not null default current_date,
+  produit_id  int references produits(id),
+  libelle     text not null,
+  variete     text,
+  quantite    numeric(10,2) not null check (quantite > 0),
+  unite       text not null,
+  prix_unitaire numeric(8,2) not null check (prix_unitaire >= 0),
+  total       numeric(10,2) not null check (total >= 0),
+  canal       text not null default 'ferme',      -- ferme | marche | tournee | autre
+  paiement    text not null default 'especes',    -- especes | carte | cheque | virement
+  note        text,
+  created_at  timestamptz default now()
+);
+create index if not exists idx_ventes_directes on ventes_directes (vendeur_id, date_vente desc);
+
+-- ── Dépenses ──
+create table if not exists depenses (
+  id          uuid primary key default uuid_generate_v4(),
+  vendeur_id  uuid references profils(id) on delete cascade not null,
+  date_depense date not null default current_date,
+  categorie   text not null default 'autre',      -- semences | plants | engrais | materiel |
+                                                  -- carburant | emballage | cotisation | autre
+  libelle     text not null,
+  fournisseur text,
+  montant     numeric(10,2) not null check (montant > 0),
+  note        text,
+  created_at  timestamptz default now()
+);
+create index if not exists idx_depenses on depenses (vendeur_id, date_depense desc);
+
+-- ── Inventaire ──
+create table if not exists inventaire (
+  id          uuid primary key default uuid_generate_v4(),
+  vendeur_id  uuid references profils(id) on delete cascade not null,
+  produit_id  int references produits(id),
+  libelle     text not null,
+  variete     text,
+  quantite    numeric(10,2) not null default 0 check (quantite >= 0),
+  unite       text not null default 'kg',
+  seuil_alerte numeric(10,2) default 0 not null check (seuil_alerte >= 0),
+  emplacement text,
+  peremption  date,
+  updated_at  timestamptz default now(),
+  created_at  timestamptz default now()
+);
+create index if not exists idx_inventaire on inventaire (vendeur_id, libelle);
+
+-- ── Pense-bête ──
+create table if not exists taches (
+  id          uuid primary key default uuid_generate_v4(),
+  vendeur_id  uuid references profils(id) on delete cascade not null,
+  titre       text not null,
+  detail      text,
+  echeance    date,
+  priorite    int default 1 not null check (priorite between 0 and 2), -- 0 basse, 2 haute
+  categorie   text default 'general' not null,   -- culture | vente | administratif |
+                                                 -- materiel | general
+  faite       boolean default false not null,
+  faite_le    timestamptz,
+  created_at  timestamptz default now()
+);
+create index if not exists idx_taches on taches (vendeur_id, faite, echeance);
+
+-- ── Règles d'accès : chacun chez soi, et professionnels seulement ──
+do $$
+declare t text;
+begin
+  foreach t in array array['ventes_directes','depenses','inventaire','taches'] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists proprietaire_%I on %I', t, t);
+    execute format($p$create policy proprietaire_%I on %I for all
+                       using (vendeur_id = auth.uid())
+                       with check (vendeur_id = auth.uid())$p$, t, t);
+  end loop;
+end $$;
+
+/**
+ * Ces outils sont réservés aux comptes professionnels. Le contrôle est
+ * en base : une règle affichée seulement dans l'interface ne serait
+ * pas une règle.
+ */
+create or replace function verifier_compte_pro() returns trigger as $$
+begin
+  if (select role from public.profils where id = new.vendeur_id) <> 'pro' then
+    raise exception 'Ces outils sont réservés aux comptes professionnels.'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['ventes_directes','depenses','inventaire','taches'] loop
+    execute format('drop trigger if exists trg_pro_%I on %I', t, t);
+    execute format('create trigger trg_pro_%I before insert on %I
+                    for each row execute function verifier_compte_pro()', t, t);
+  end loop;
+end $$;
+
+/**
+ * Relevé mensuel du professionnel sur douze mois : ventes en ligne
+ * effectivement versées, ventes directes, dépenses, résultat.
+ * Une vente en ligne n'est comptée qu'une fois versée, c'est-à-dire
+ * après confirmation de retrait : c'est la règle du site, la compta
+ * ne doit pas la contredire.
+ */
+create or replace function releve_mensuel(p_mois int default 12)
+returns table (
+  mois date, ventes_ligne numeric, ventes_directes numeric,
+  depenses numeric, resultat numeric
+) as $$
+  with periode as (
+    select generate_series(
+      date_trunc('month', current_date) - ((p_mois - 1) || ' months')::interval,
+      date_trunc('month', current_date), '1 month'
+    )::date as mois
+  ),
+  ligne as (
+    select date_trunc('month', l.verse_le)::date as mois,
+           sum(l.prix_unitaire * l.quantite) as total
+      from lignes_commande l
+     where l.vendeur_id = auth.uid() and l.verse and l.verse_le is not null
+     group by 1
+  ),
+  directe as (
+    select date_trunc('month', date_vente)::date as mois, sum(total) as total
+      from ventes_directes where vendeur_id = auth.uid() group by 1
+  ),
+  sortie as (
+    select date_trunc('month', date_depense)::date as mois, sum(montant) as total
+      from depenses where vendeur_id = auth.uid() group by 1
+  )
+  select p.mois,
+         coalesce(l.total, 0), coalesce(d.total, 0), coalesce(s.total, 0),
+         coalesce(l.total, 0) + coalesce(d.total, 0) - coalesce(s.total, 0)
+    from periode p
+    left join ligne l on l.mois = p.mois
+    left join directe d on d.mois = p.mois
+    left join sortie s on s.mois = p.mois
+   order by p.mois;
+$$ language sql stable security definer set search_path = public;
+
+/** Les produits qui rapportent le plus, en ligne et en direct confondus. */
+create or replace function palmares_produits(p_jours int default 90)
+returns table (libelle text, quantite numeric, chiffre numeric) as $$
+  select libelle, sum(quantite), sum(chiffre) from (
+    select l.titre as libelle, l.quantite::numeric,
+           l.prix_unitaire * l.quantite as chiffre
+      from lignes_commande l
+     where l.vendeur_id = auth.uid() and l.verse
+       and l.verse_le > now() - (p_jours || ' days')::interval
+    union all
+    select v.libelle, v.quantite, v.total
+      from ventes_directes v
+     where v.vendeur_id = auth.uid()
+       and v.date_vente > current_date - p_jours
+  ) t
+  group by libelle order by 3 desc limit 8;
+$$ language sql stable security definer set search_path = public;

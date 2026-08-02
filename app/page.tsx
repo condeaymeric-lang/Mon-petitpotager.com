@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 import { annoncesAutour, catalogue, evenementsAutour, producteursAutour, annoncesEnAvant } from '@/lib/donnees';
 import { contexteVisite } from '@/lib/contexte';
@@ -5,6 +6,8 @@ import ChoixCommune from '@/components/ChoixCommune';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import BarreVisiteur from '@/components/BarreVisiteur';
 import CarteAnnonce from '@/components/CarteAnnonce';
+import BarreFiltres from '@/components/BarreFiltres';
+import { EncartPub } from '@/components/EncartPub';
 import CarteEvenement from '@/components/CarteEvenement';
 import PiedDePage from '@/components/PiedDePage';
 import BlocMeteo from '@/components/Meteo';
@@ -82,19 +85,16 @@ export default async function Accueil({
             </p>
           </div>
 
-          <div className="filters">
-            <Link href="/" className={`fchip${!searchParams.cat ? ' on' : ''}`}>Tout</Link>
-            {categories.map((c) => (
-              <Link key={c} href={`/?cat=${encodeURIComponent(c)}`}
-                className={`fchip${searchParams.cat === c ? ' on' : ''}`}>{c}</Link>
-            ))}
-          </div>
+          <BarreFiltres categories={categories} active={searchParams.cat} />
 
           {annonces.length > 0 ? (
             <div className="feed">
-              {annonces.map((a) => (
-                <CarteAnnonce key={a.id} annonce={a}
-                  moisSaison={saisonParProduit.get(a.produit ?? '') ?? undefined} />
+              {annonces.map((a, i) => (
+                <Fragment key={a.id}>
+                  <CarteAnnonce annonce={a}
+                    moisSaison={saisonParProduit.get(a.produit ?? '') ?? undefined} />
+                  {i === 7 && annonces.length > 9 && <EncartPub format="banniere" />}
+                </Fragment>
               ))}
             </div>
           ) : (

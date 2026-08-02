@@ -16,6 +16,7 @@ const ONGLETS = {
     { href: '/vendre/commandes', cle: 'cmd-vendeur', label: 'Commandes', d: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0' },
     { href: '/vendre/annonces', cle: 'annonces', label: 'Annonces', d: 'M4 4h16v16H4zM4 9h16M9 9v11' },
     { href: '/vendre/ventes', cle: 'ventes', label: 'Ventes', d: 'M18.5 6.5a7 7 0 1 0 0 11M4 10.5h11M4 14h9.5' },
+    { href: '/vendre/gestion', cle: 'gestion', label: 'Gestion', d: 'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4M9 3v4h6V3M8 12h8M8 16h5' },
     { href: '/profil', cle: 'profil', label: 'Profil', d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8' },
   ],
 };
