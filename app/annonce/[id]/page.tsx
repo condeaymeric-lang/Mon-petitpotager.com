@@ -21,6 +21,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
 
   if (!a) notFound();
 
+  const nomVariete = a.variete?.nom ?? a.variete_libre ?? null;
   const estMien = a.vendeur_id === profil.id;
   const prixRef = a.produit?.prix_ref ?? null;
   const eco = a.mode === 'vente' && prixRef && a.prix < prixRef;
@@ -63,7 +64,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
             </div>
 
             <h1>{a.titre}</h1>
-            {a.variete && <p className="vari" style={{ fontSize: '.95rem', marginTop: 4 }}>{a.variete.nom}</p>}
+            {nomVariete && <p className="vari" style={{ fontSize: '.95rem', marginTop: 4 }}>{nomVariete}</p>}
             <p className="price" style={{ fontSize: '1.7rem', margin: '10px 0 4px' }}>
               {a.mode === 'don' ? 'Gratuit' : a.mode === 'troc' ? 'À troquer'
                 : <>{eur(a.prix)} <small style={{ fontSize: '.85rem' }}>/ {a.unite}</small></>}
@@ -100,7 +101,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
             ) : (
               <BoutonPanier
                 annonce={{
-                  annonce_id: a.id, titre: a.titre, variete: a.variete?.nom ?? null,
+                  annonce_id: a.id, titre: a.titre, variete: nomVariete,
                   photo: a.photos?.[0] ?? null, mode: a.mode, prix: a.prix, unite: a.unite,
                   quantite: 1, stock: a.quantite, vendeur_id: a.vendeur_id,
                   vendeur_prenom: a.vendeur?.prenom ?? '', commune: a.commune,

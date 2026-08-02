@@ -33,7 +33,7 @@ export default async function MesAnnonces() {
                     {a.photos?.[0] ? <img src={a.photos[0]} alt="" loading="lazy" /> : <Illustration nom={a.variete?.illustration ?? a.produit?.illustration} />}
                   </div>
                   <div className="line-b">
-                    <h4>{a.titre}{a.variete ? ` — ${a.variete.nom}` : ''}</h4>
+                    <h4>{a.titre}{(a.variete?.nom ?? a.variete_libre) ? ` — ${a.variete?.nom ?? a.variete_libre}` : ''}</h4>
                     <p>
                       {a.mode === 'vente' ? `${eur(a.prix)} / ${a.unite}` : a.mode === 'troc' ? 'Troc' : 'Don'}
                       {' · '}reste {a.quantite} · {a.commune}

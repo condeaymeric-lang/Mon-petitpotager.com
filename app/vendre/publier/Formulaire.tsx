@@ -21,6 +21,8 @@ export default function Formulaire({
   const [etape, setEtape] = useState(initial ? 1 : 0);
   const [produit, setProduit] = useState<Produit | null>(initial);
   const [variete, setVariete] = useState<Variete | null>(null);
+  const [varieteLibre, setVarieteLibre] = useState('');
+  const [saisieLibre, setSaisieLibre] = useState(false);
 
   const [mode, setMode] = useState<ModeTransaction>('vente');
   const [prix, setPrix] = useState('');
@@ -38,6 +40,7 @@ export default function Formulaire({
   const categories = [...new Set(produits.map((p) => p.categorie))];
   const mesVarietes = varietes.filter((v) => v.produit_id === produit?.id);
   const mois = new Date().toLocaleDateString('fr-FR', { month: 'long' });
+  const nomVariete = variete?.nom ?? varieteLibre.trim();
 
   async function ajouterPhotos(e: React.ChangeEvent<HTMLInputElement>) {
     const fs = [...(e.target.files ?? [])].slice(0, 4 - photos.length);
@@ -59,7 +62,7 @@ export default function Formulaire({
   }
 
   async function publier() {
-    if (!produit || !variete) return;
+    if (!produit || !nomVariete) return;
     const p = parseFloat(prix.replace(',', '.'));
     if (mode === 'vente' && !(p > 0)) { setErreur('Indiquez un prix supérieur à zéro.'); return; }
     setErreur(''); setEnvoi(true);
@@ -69,9 +72,10 @@ export default function Formulaire({
       vendeur_id: profil.id,
       secteur: secteur.code_insee,
       produit_id: produit.id,
-      variete_id: variete.id,
+      variete_id: variete?.id ?? null,
+      variete_libre: variete ? null : nomVariete,
       titre: produit.nom,
-      description: description.trim() || variete.description,
+      description: description.trim() || variete?.description || null,
       mode,
       prix: mode === 'vente' ? p : 0,
       unite: produit.unite,
@@ -150,6 +154,7 @@ export default function Formulaire({
             <button key={v.id} className="var-btn"
               onClick={() => {
                 setVariete(v);
+                setSaisieLibre(false);
                 setDescription(v.description ?? '');
                 if (produit.prix_ref) setPrix((produit.prix_ref * 0.7).toFixed(2));
                 setEtape(2);
@@ -158,6 +163,49 @@ export default function Formulaire({
               <div><b>{v.nom}</b><span>{v.description}</span></div>
             </button>
           ))}
+
+          {!saisieLibre ? (
+            <button className="var-btn var-btn-autre" onClick={() => setSaisieLibre(true)}>
+              <div className="ill"><Illustration nom={produit.illustration} /></div>
+              <div>
+                <b>Une autre variété</b>
+                <span>
+                  {mesVarietes.length > 0
+                    ? "Votre variété n'est pas dans la liste : indiquez son nom"
+                    : 'Indiquez le nom de votre variété'}
+                </span>
+              </div>
+            </button>
+          ) : (
+            <div className="card">
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor="vl">Nom de votre variété</label>
+                <input className="inp" id="vl" autoFocus maxLength={80}
+                  value={varieteLibre} onChange={(e) => setVarieteLibre(e.target.value)}
+                  placeholder={`Par exemple : ${mesVarietes[0]?.nom ?? 'variété de pays'}`} />
+                <p className="help">
+                  Si vous ne connaissez pas le nom exact, décrivez-la simplement :
+                  « ancienne du jardin », « rouge allongée ».
+                </p>
+              </div>
+              <div className="row-btn" style={{ marginTop: 14 }}>
+                <button className="btn btn-s" style={{ flex: 1 }}
+                  onClick={() => { setSaisieLibre(false); setVarieteLibre(''); }}>
+                  Annuler
+                </button>
+                <button className="btn btn-p" style={{ flex: 1 }}
+                  disabled={!varieteLibre.trim()}
+                  onClick={() => {
+                    setVariete(null);
+                    setDescription('');
+                    if (produit.prix_ref) setPrix((produit.prix_ref * 0.7).toFixed(2));
+                    setEtape(2);
+                  }}>
+                  Continuer
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {produit.prix_ref && (
@@ -174,7 +222,7 @@ export default function Formulaire({
   }
 
   // ── Étape 3 : la fiche ──
-  if (!produit || !variete) return null;
+  if (!produit || !nomVariete) return null;
   const pNum = parseFloat(prix.replace(',', '.')) || 0;
   const ref = produit.prix_ref ?? 0;
   const ecart = ref - pNum;
@@ -183,7 +231,7 @@ export default function Formulaire({
     <div className="page page-form">
       <button className="back" onClick={() => setEtape(1)}>← Changer de variété</button>
       <div className="page-head">
-        <h1>{produit.nom} — {variete.nom}</h1>
+        <h1>{produit.nom} — {nomVariete}</h1>
         <p>Plus c'est précis, plus ça part vite.</p>
       </div>
 

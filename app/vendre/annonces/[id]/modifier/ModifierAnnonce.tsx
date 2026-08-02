@@ -66,7 +66,7 @@ export default function ModifierAnnonce({
   return (
     <div className="page page-form">
       <div className="page-head">
-        <h1>{annonce.titre}{annonce.variete ? ` — ${annonce.variete.nom}` : ''}</h1>
+        <h1>{annonce.titre}{(annonce.variete?.nom ?? annonce.variete_libre) ? ` — ${annonce.variete?.nom ?? annonce.variete_libre}` : ''}</h1>
         <p>Modifiez le prix, la quantité, la description ou les photos.</p>
       </div>
 

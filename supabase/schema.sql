@@ -632,3 +632,51 @@ returns table (
            pr.prenom asc
   limit p_limite;
 $$ language sql stable;
+
+-- ═══════════════════════════════════════════════════════════════
+--  VARIÉTÉ LIBRE
+--  Le catalogue ne peut pas contenir toutes les variétés existantes.
+--  Quand la sienne n'y figure pas, le vendeur la saisit librement :
+--  variete_id reste nul et le nom est conservé ici.
+-- ═══════════════════════════════════════════════════════════════
+alter table annonces add column if not exists variete_libre text;
+
+drop function if exists annonces_autour(double precision, double precision, int, text, int);
+create or replace function annonces_autour(
+  p_lat double precision,
+  p_lon double precision,
+  p_rayon_km int default 20,
+  p_categorie text default null,
+  p_limite int default 60
+)
+returns table (
+  id uuid, titre text, description text, mode mode_transaction,
+  prix numeric, unite text, quantite int, commune text,
+  photos text[], categorie text, produit text, variete text,
+  prix_ref numeric, distance_km numeric,
+  vendeur_prenom text, vendeur_pro boolean, vendeur_id uuid, vendeur_avatar text,
+  illustration text,
+  created_at timestamptz
+) as $$
+  select
+    a.id, a.titre, a.description, a.mode,
+    a.prix, a.unite, a.quantite, a.commune,
+    a.photos, p.categorie, p.nom, coalesce(v.nom, a.variete_libre),
+    p.prix_ref,
+    round((st_distance(a.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+    pr.prenom, pr.pro_verifie, pr.id, pr.avatar_url,
+    coalesce(v.illustration, p.illustration),
+    a.created_at
+  from annonces a
+  join profils pr on pr.id = a.vendeur_id
+  left join produits p on p.id = a.produit_id
+  left join varietes v on v.id = a.variete_id
+  where a.statut = 'en_ligne'
+    and a.quantite > 0
+    and st_dwithin(a.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+    and (p_categorie is null or p.categorie = p_categorie)
+  order by
+    (a.boost_jusqu_a is not null and a.boost_jusqu_a > now()) desc,
+    a.created_at desc
+  limit p_limite;
+$$ language sql stable;

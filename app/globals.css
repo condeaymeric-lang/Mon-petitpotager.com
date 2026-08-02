@@ -141,6 +141,8 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .var-list{display:grid;gap:8px}
 .var-btn{display:flex;align-items:center;gap:12px;background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r-m);padding:12px 14px;text-align:left;transition:.15s;width:100%}
 .var-btn.on{border-color:var(--forest);background:var(--leaf-soft)}
+.var-btn-autre{border-style:dashed}
+.var-btn-autre b{color:var(--forest-2)}
 .var-btn .ill{width:38px;height:38px;flex-shrink:0}
 .var-btn b{font-size:.89rem;font-weight:600;display:block}
 .var-btn span{font-size:.75rem;color:var(--ink-soft)}
