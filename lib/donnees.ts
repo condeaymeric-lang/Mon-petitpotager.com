@@ -70,6 +70,19 @@ export async function producteursAutour(lat: number, lon: number, rayonKm: numbe
   return (data ?? []) as ProducteurProche[];
 }
 
+/** Produits des professionnels du secteur, mis en avant. */
+export async function annoncesEnAvant(lat: number, lon: number, rayonKm: number, limite = 12) {
+  const sb = creerClientServeur();
+  const { data, error } = await sb.rpc('annonces_en_avant', {
+    p_lat: lat, p_lon: lon, p_rayon_km: rayonKm, p_limite: limite,
+  });
+  if (error) {
+    console.error('annonces_en_avant:', error.message);
+    return [] as AnnonceProche[];
+  }
+  return (data ?? []) as AnnonceProche[];
+}
+
 export async function catalogue() {
   const sb = creerClientServeur();
   const [{ data: produits }, { data: varietes }] = await Promise.all([

@@ -1,3 +1,16 @@
+/** Dégradés partagés : donnent du relief aux illustrations, qui restent
+ *  des dessins vectoriels — ce ne sont pas des photographies. */
+function Volume({ id, clair, fonce }: { id: string; clair: string; fonce: string }) {
+  return (
+    <defs>
+      <radialGradient id={id} cx="36%" cy="30%" r="78%">
+        <stop offset="0%" stopColor={clair} />
+        <stop offset="100%" stopColor={fonce} />
+      </radialGradient>
+    </defs>
+  );
+}
+
 /** Illustrations vectorielles de repli, quand le vendeur n'a pas mis de photo. */
 const P: Record<string, JSX.Element> = {
   tomate: (<><rect width="100" height="100" fill="#FBEDE9"/><ellipse cx="50" cy="58" rx="27" ry="25" fill="#C93B26"/><ellipse cx="40" cy="50" rx="9" ry="7" fill="#E06B54" opacity=".55"/><path d="M50 33v-8" stroke="#3F7A38" strokeWidth="4" strokeLinecap="round"/><path d="M50 34c-3-8-11-11-18-9 2 7 9 11 18 9Z" fill="#4B8C3F"/><path d="M50 34c3-8 11-11 18-9-2 7-9 11-18 9Z" fill="#3F7A38"/></>),
@@ -77,7 +90,21 @@ const P: Record<string, JSX.Element> = {
 export function Illustration({ nom, className }: { nom?: string | null; className?: string }) {
   return (
     <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
+      <defs>
+        <radialGradient id="mpp-lum" cx="34%" cy="26%" r="72%">
+          <stop offset="0%" stopColor="#fff" stopOpacity=".38" />
+          <stop offset="62%" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="mpp-ombre" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#2A3A2A" stopOpacity=".22" />
+          <stop offset="100%" stopColor="#2A3A2A" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {/* Ombre portée au sol, sous le sujet. */}
+      <ellipse cx="50" cy="86" rx="26" ry="5" fill="url(#mpp-ombre)" />
       {P[nom ?? ''] ?? P.plant}
+      {/* Lumière rasante par-dessus, qui arrondit les aplats. */}
+      <rect width="100" height="100" fill="url(#mpp-lum)" style={{ mixBlendMode: 'soft-light' }} />
     </svg>
   );
 }

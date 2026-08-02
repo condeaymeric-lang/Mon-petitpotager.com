@@ -1,24 +1,29 @@
 import Link from 'next/link';
-import { profilCourant, producteursAutour } from '@/lib/donnees';
+import { producteursAutour } from '@/lib/donnees';
+import { contexteVisite } from '@/lib/contexte';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
+import BarreVisiteur from '@/components/BarreVisiteur';
+import PiedDePage from '@/components/PiedDePage';
 import { Illustration } from '@/components/Illustrations';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Producteurs() {
-  const { profil, secteur } = await profilCourant();
+  const { connecte, secteur, rayonKm } = await contexteVisite();
   const producteurs = secteur
-    ? await producteursAutour(secteur.lat, secteur.lon, profil.rayon_km)
+    ? await producteursAutour(secteur.lat, secteur.lon, rayonKm)
     : [];
 
   return (
     <>
-      <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />
-      <div className="app has-tabbar"><div className="page">
+      {connecte
+        ? <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={rayonKm} />
+        : <BarreVisiteur commune={secteur?.nom ?? '—'} rayonKm={rayonKm} />}
+      <div className={connecte ? "app has-tabbar" : "app"}><div className="page">
         <div className="page-head">
           <h1>Producteurs</h1>
           <p>
-            Fermes, maraîchers et artisans professionnels dans les {profil.rayon_km} km
+            Fermes, maraîchers et artisans professionnels dans les {rayonKm} km
             autour de {secteur?.nom}.
           </p>
         </div>
@@ -64,7 +69,8 @@ export default async function Producteurs() {
           </div>
         )}
       </div></div>
-      <BarreBas />
+      <PiedDePage />
+      {connecte && <BarreBas />}
     </>
   );
 }

@@ -66,7 +66,8 @@ export default async function EspaceVendeur() {
       <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />
       <div className="app has-tabbar"><div className="page">
         <div className="page-head">
-          <h1>{estPro ? (profil.raison_sociale || 'Mon exploitation') : 'Espace vendeur'}</h1>
+          <span className="surtitre">{estPro ? 'Tableau de bord' : 'Espace vendeur'}</span>
+          <h1>{estPro ? (profil.raison_sociale || 'Mon exploitation') : 'Mes ventes'}</h1>
           <p>
             {estPro ? 'Producteur professionnel' : 'Jardinier amateur'}
             {secteur && ` · ${secteur.nom}`}

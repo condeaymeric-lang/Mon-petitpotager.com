@@ -25,14 +25,17 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
 
-  // Les conditions doivent être lisibles avant de les accepter à l'inscription.
+  // Le site se consulte sans compte : on ne protège que ce qui engage
+  // vraiment la personne (panier, commandes, profil, espace vendeur).
   const publiques = [
     '/connexion', '/inscription', '/pourquoi', '/auth',
     '/cgu', '/confidentialite', '/mentions-legales', '/contact',
+    '/annonce', '/producteurs', '/evenements',
   ];
+  const estAccueil = path === '/';
   const estPublique = publiques.some((p) => path.startsWith(p));
 
-  if (!user && !estPublique) {
+  if (!user && !estPublique && !estAccueil) {
     const url = request.nextUrl.clone();
     url.pathname = '/connexion';
     url.searchParams.set('retour', path);

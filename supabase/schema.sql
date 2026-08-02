@@ -783,3 +783,81 @@ as $$
   order by sum(l.prix_unitaire * l.quantite) desc
   limit p_limite;
 $$ language sql stable;
+
+-- ═══════════════════════════════════════════════════════════════
+--  PRODUITS TRANSFORMÉS — RÉSERVÉS AUX PROFESSIONNELS
+--  La vente de denrées transformées (laitages, conserves, viandes,
+--  boissons) suppose un statut déclaré et des obligations sanitaires
+--  que les particuliers n'ont pas. Les amateurs ne publient donc que
+--  des produits bruts. La règle est appliquée en base, pas seulement
+--  dans l'interface : la contourner côté navigateur ne sert à rien.
+-- ═══════════════════════════════════════════════════════════════
+alter table produits add column if not exists transforme boolean default false not null;
+
+update produits set transforme = true where cle in (
+  'confiture','fromage','lait','beurre','yaourt','creme'
+);
+
+create or replace function verifier_droit_publication() returns trigger as $$
+declare est_transforme boolean; role_vendeur role_user;
+begin
+  select p.transforme into est_transforme
+    from public.produits p where p.id = new.produit_id;
+  select pr.role into role_vendeur
+    from public.profils pr where pr.id = new.vendeur_id;
+
+  if coalesce(est_transforme, false) and role_vendeur <> 'pro' then
+    raise exception 'Ce produit transformé est réservé aux comptes professionnels.'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_droit_publication on annonces;
+create trigger trg_droit_publication before insert or update on annonces
+  for each row execute function verifier_droit_publication();
+
+-- ═══════════════════════════════════════════════════════════════
+--  MISE EN AVANT
+--  Produits des professionnels du secteur, les annonces boostées
+--  d'abord. Réservé aux comptes professionnels : c'est ce qui
+--  distingue leur visibilité de celle d'un particulier.
+-- ═══════════════════════════════════════════════════════════════
+drop function if exists annonces_en_avant(double precision, double precision, int, int);
+create or replace function annonces_en_avant(
+  p_lat double precision,
+  p_lon double precision,
+  p_rayon_km int default 20,
+  p_limite int default 12
+)
+returns table (
+  id uuid, titre text, description text, mode mode_transaction,
+  prix numeric, unite text, quantite int, commune text,
+  photos text[], categorie text, produit text, variete text,
+  prix_ref numeric, distance_km numeric,
+  vendeur_prenom text, vendeur_pro boolean, vendeur_id uuid, vendeur_avatar text,
+  illustration text,
+  created_at timestamptz
+) as $$
+  select
+    a.id, a.titre, a.description, a.mode,
+    a.prix, a.unite, a.quantite, a.commune,
+    a.photos, p.categorie, p.nom, coalesce(v.nom, a.variete_libre),
+    p.prix_ref,
+    round((st_distance(a.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+    coalesce(pr.raison_sociale, pr.prenom), pr.pro_verifie, pr.id, pr.avatar_url,
+    coalesce(v.illustration, p.illustration),
+    a.created_at
+  from annonces a
+  join profils pr on pr.id = a.vendeur_id
+  left join produits p on p.id = a.produit_id
+  left join varietes v on v.id = a.variete_id
+  where a.statut = 'en_ligne'
+    and a.quantite > 0
+    and pr.role = 'pro'
+    and st_dwithin(a.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+  order by
+    (a.boost_jusqu_a is not null and a.boost_jusqu_a > now()) desc,
+    a.created_at desc
+  limit p_limite;
+$$ language sql stable;

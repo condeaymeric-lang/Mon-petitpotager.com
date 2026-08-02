@@ -1,26 +1,31 @@
 import Link from 'next/link';
-import { profilCourant, evenementsAutour } from '@/lib/donnees';
+import { evenementsAutour } from '@/lib/donnees';
+import { contexteVisite } from '@/lib/contexte';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
+import BarreVisiteur from '@/components/BarreVisiteur';
+import PiedDePage from '@/components/PiedDePage';
 import { Illustration } from '@/components/Illustrations';
 import CarteEvenement from '@/components/CarteEvenement';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Evenements() {
-  const { profil, secteur } = await profilCourant();
+  const { connecte, secteur, rayonKm } = await contexteVisite();
   const evenements = secteur
-    ? await evenementsAutour(secteur.lat, secteur.lon, profil.rayon_km, 50)
+    ? await evenementsAutour(secteur.lat, secteur.lon, rayonKm, 50)
     : [];
 
   return (
     <>
-      <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />
-      <div className="app has-tabbar"><div className="page page-form">
+      {connecte
+        ? <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={rayonKm} />
+        : <BarreVisiteur commune={secteur?.nom ?? '—'} rayonKm={rayonKm} />}
+      <div className={connecte ? "app has-tabbar" : "app"}><div className="page page-form">
         <div className="page-head">
           <h1>Autour de chez vous</h1>
           <p>
             Marchés, fêtes de village, brocantes et portes ouvertes dans les{' '}
-            {profil.rayon_km} km. Proposés par les habitants du secteur.
+            {rayonKm} km. Proposés par les habitants du secteur.
           </p>
         </div>
 
@@ -45,7 +50,8 @@ export default async function Evenements() {
           </div>
         )}
       </div></div>
-      <BarreBas />
+      <PiedDePage />
+      {connecte && <BarreBas />}
     </>
   );
 }

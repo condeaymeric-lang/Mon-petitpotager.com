@@ -38,6 +38,7 @@ export interface Produit {
   categorie: string;
   unite: string;
   prix_ref: number | null;
+  transforme: boolean;
   mois_saison: number[];
   illustration: string | null;
 }

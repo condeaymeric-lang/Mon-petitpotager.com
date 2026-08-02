@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { profilCourant } from '@/lib/donnees';
+import { contexteVisite } from '@/lib/contexte';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
+import BarreVisiteur from '@/components/BarreVisiteur';
+import PiedDePage from '@/components/PiedDePage';
 import { Illustration } from '@/components/Illustrations';
 import { eur, estDeSaison, distanceKm } from '@/lib/utils';
 import BoutonPanier from './BoutonPanier';
@@ -9,7 +11,8 @@ import BoutonPanier from './BoutonPanier';
 export const dynamic = 'force-dynamic';
 
 export default async function PageAnnonce({ params }: { params: { id: string } }) {
-  const { profil, secteur, sb } = await profilCourant();
+  const { connecte, profil, secteur, rayonKm, sb } = await contexteVisite();
+  if (!secteur) notFound();
 
   const { data: a } = await sb
     .from('annonces')
@@ -22,7 +25,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
   if (!a) notFound();
 
   const nomVariete = a.variete?.nom ?? a.variete_libre ?? null;
-  const estMien = a.vendeur_id === profil.id;
+  const estMien = connecte && profil ? a.vendeur_id === profil.id : false;
   const prixRef = a.produit?.prix_ref ?? null;
   const eco = a.mode === 'vente' && prixRef && a.prix < prixRef;
   const pct = eco ? Math.round((1 - a.prix / prixRef) * 100) : 0;
@@ -31,8 +34,10 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
 
   return (
     <>
-      <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />
-      <div className="app has-tabbar"><div className="page">
+      {connecte
+        ? <BarreHaut commune={secteur.nom} rayonKm={rayonKm} />
+        : <BarreVisiteur commune={secteur.nom} rayonKm={rayonKm} />}
+      <div className={connecte ? 'app has-tabbar' : 'app'}><div className="page">
         <Link href="/" className="back">← Retour</Link>
 
         <div className="produit-layout">
@@ -91,7 +96,17 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
               </p>
             </div>
 
-            {estMien ? (
+            {!connecte ? (
+              <>
+                <Link className="btn btn-p" href="/inscription" style={{ marginTop: 14 }}>
+                  Créer un compte pour commander
+                </Link>
+                <p className="tiny center" style={{ marginTop: 10 }}>
+                  La consultation est libre. Il faut un compte pour réserver un produit
+                  auprès de son voisin.
+                </p>
+              </>
+            ) : estMien ? (
               <>
                 <Link className="btn btn-s" href="/vendre/annonces" style={{ marginTop: 14 }}>
                   Gérer mes annonces
@@ -112,7 +127,8 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
           </div>
         </div>
       </div></div>
-      <BarreBas />
+      <PiedDePage />
+      {connecte && <BarreBas />}
     </>
   );
 }

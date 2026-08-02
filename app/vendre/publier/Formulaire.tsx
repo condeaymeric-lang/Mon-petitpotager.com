@@ -23,6 +23,8 @@ export default function Formulaire({
   const [variete, setVariete] = useState<Variete | null>(null);
   const [varieteLibre, setVarieteLibre] = useState('');
   const [saisieLibre, setSaisieLibre] = useState(false);
+  const [recherche, setRecherche] = useState('');
+  const [categorieOuverte, setCategorieOuverte] = useState<string | null>(null);
 
   const [mode, setMode] = useState<ModeTransaction>('vente');
   const [prix, setPrix] = useState('');
@@ -90,7 +92,11 @@ export default function Formulaire({
 
     if (error || !data) {
       setEnvoi(false);
-      setErreur("Publication impossible. Réessayez dans un instant.");
+      setErreur(
+        error?.message?.includes('professionnels')
+          ? 'Ce produit transformé est réservé aux comptes professionnels. Changez de statut dans votre profil, ou choisissez un produit brut.'
+          : "Publication impossible. Réessayez dans un instant."
+      );
       return;
     }
 
@@ -105,27 +111,76 @@ export default function Formulaire({
 
   // ── Étape 1 : le produit ──
   if (etape === 0) {
+    const q = recherche.trim().toLowerCase();
+    const filtres = q.length > 0
+      ? produits.filter((p) => p.nom.toLowerCase().includes(q))
+      : [];
+    const bloques = (p: Produit) => p.transforme && profil.role !== 'pro';
+
+    const ligne = (p: Produit) => (
+      <button key={p.id} className="pchoix" disabled={bloques(p)}
+        onClick={() => { setProduit(p); setVariete(null); setVarieteLibre(''); setSaisieLibre(false); setEtape(1); }}>
+        <span className="pchoix-ill"><Illustration nom={p.illustration} /></span>
+        <span className="pchoix-t">
+          <b>{p.nom}</b>
+          <span>
+            {bloques(p)
+              ? 'Réservé aux comptes professionnels'
+              : `${estDeSaison(p.mois_saison) ? 'De saison' : 'Hors saison'} · au ${p.unite}`}
+          </span>
+        </span>
+        {p.transforme && <span className="badge b-pro">Pro</span>}
+      </button>
+    );
+
     return (
       <div className="page page-form">
         <div className="page-head">
           <h1>Que proposez-vous ?</h1>
-          <p>Choisissez le produit, la variété vient ensuite.</p>
+          <p>Cherchez votre produit, ou parcourez les catégories.</p>
         </div>
-        {categories.map((cat) => (
-          <div key={cat}>
-            <h3 style={{ margin: '18px 0 10px' }}>{cat}</h3>
-            <div className="cat-grid">
-              {produits.filter((p) => p.categorie === cat).map((p) => (
-                <button key={p.id} className="cat-btn"
-                  onClick={() => { setProduit(p); setVariete(null); setEtape(1); }}>
-                  <div className="ill"><Illustration nom={p.illustration} /></div>
-                  <b>{p.nom}</b>
-                  <span>{estDeSaison(p.mois_saison) ? 'De saison' : 'Hors saison'}</span>
+
+        <div className="field">
+          <label htmlFor="rp">Rechercher un produit</label>
+          <input className="inp" id="rp" autoComplete="off" value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="Tomate, miel, courgette…" />
+          <p className="help" aria-live="polite">
+            {q.length > 0
+              ? `${filtres.length} résultat${filtres.length > 1 ? 's' : ''}.`
+              : `${produits.length} produits au catalogue.`}
+          </p>
+        </div>
+
+        {q.length > 0 ? (
+          filtres.length > 0
+            ? <div className="pliste">{filtres.map(ligne)}</div>
+            : <p className="muted">Aucun produit ne correspond. Essayez un autre mot.</p>
+        ) : (
+          categories.map((cat) => {
+            const ouverte = categorieOuverte === cat;
+            const dedans = produits.filter((p) => p.categorie === cat);
+            return (
+              <div key={cat} className="pcat">
+                <button className="pcat-t" aria-expanded={ouverte}
+                  onClick={() => setCategorieOuverte(ouverte ? null : cat)}>
+                  <b>{cat}</b>
+                  <span className="tiny">{dedans.length}</span>
+                  <span className="pcat-fleche" aria-hidden="true">{ouverte ? '−' : '+'}</span>
                 </button>
-              ))}
-            </div>
-          </div>
-        ))}
+                {ouverte && <div className="pliste">{dedans.map(ligne)}</div>}
+              </div>
+            );
+          })
+        )}
+
+        {profil.role !== 'pro' && (
+          <p className="tiny" style={{ marginTop: 16 }}>
+            Les produits transformés (laitages, conserves, boissons, viandes) supposent
+            un statut professionnel déclaré. Ils sont signalés « Pro » et ne peuvent pas
+            être publiés depuis un compte de jardinier amateur.
+          </p>
+        )}
       </div>
     );
   }
