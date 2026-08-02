@@ -25,8 +25,8 @@ export async function contexteVisite(): Promise<Contexte> {
   const { data: { user } } = await sb.auth.getUser();
 
   if (user) {
-    const { data: profil } = await sb
-      .from('profils').select('*').eq('id', user.id).maybeSingle<Profil>();
+    const { data: fiches } = await sb.rpc('mon_profil');
+    const profil = (fiches?.[0] ?? null) as Profil | null;
 
     let secteur: Secteur | null = null;
     if (profil?.secteur) {

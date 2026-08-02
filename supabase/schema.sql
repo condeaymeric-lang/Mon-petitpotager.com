@@ -965,3 +965,93 @@ begin
 
   return v_montant;
 end $$ language plpgsql security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  ATTRIBUTION DES POINTS
+--  Les points s'obtiennent en achetant et en tenant un point
+--  relais. Publier une annonce n'en rapporte pas : sinon il
+--  suffirait de publier en boucle pour fabriquer des bons d'achat.
+--
+--  ajouter_points reste réservée au serveur : elle accepte
+--  n'importe quel montant pour n'importe qui, un client ne doit
+--  jamais pouvoir l'appeler.
+-- ═══════════════════════════════════════════════════════════════
+-- Le rôle « public » porte le droit par défaut : le retirer d'anon et
+-- d'authenticated seulement ne suffirait pas.
+revoke execute on function ajouter_points(uuid, int, text, uuid) from public, anon, authenticated;
+
+/**
+ * Crédite les points d'une commande retirée : l'acheteur pour son
+ * achat, et l'hôte du point relais pour le service rendu.
+ * Appelable uniquement par l'acheteur, une seule fois par commande.
+ */
+create or replace function crediter_retrait(p_commande uuid)
+returns int as $$
+declare
+  v_profil uuid := auth.uid();
+  v_cmd record;
+  v_gain int;
+begin
+  if v_profil is null then
+    raise exception 'Connexion requise.' using errcode = 'check_violation';
+  end if;
+
+  select id, acheteur_id, sous_total, statut, mode_retrait, relais_id, reference
+    into v_cmd from public.commandes where id = p_commande;
+
+  if v_cmd.id is null or v_cmd.acheteur_id <> v_profil then
+    raise exception 'Commande introuvable.' using errcode = 'check_violation';
+  end if;
+  if v_cmd.statut <> 'retiree' then
+    raise exception 'Le retrait n''est pas confirmé.' using errcode = 'check_violation';
+  end if;
+  -- Un seul crédit par commande, même si la page est rechargée.
+  if exists (select 1 from public.mouvements_points
+              where commande_id = p_commande and montant > 0) then
+    return 0;
+  end if;
+
+  v_gain := floor(coalesce(v_cmd.sous_total, 0))::int;
+  if v_gain > 0 then
+    perform public.ajouter_points(v_profil, v_gain,
+      'Achat retiré — ' || v_cmd.reference, p_commande);
+  end if;
+
+  -- L'hôte du point relais est récompensé, jamais l'acheteur lui-même.
+  if v_cmd.mode_retrait = 'relais' and v_cmd.relais_id is not null
+     and v_cmd.relais_id <> v_profil then
+    perform public.ajouter_points(v_cmd.relais_id, 20,
+      'Colis remis en point relais — ' || v_cmd.reference, p_commande);
+  end if;
+
+  return v_gain;
+end $$ language plpgsql security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  CONFIDENTIALITÉ DES PROFILS
+--  Les profils sont lisibles par tous, mais pas dans leur
+--  intégralité : le nom de famille, le téléphone, le SIRET et
+--  l'identifiant de paiement ne regardent personne d'autre.
+-- ═══════════════════════════════════════════════════════════════
+-- Un GRANT sur la table entière l'emporte sur un REVOKE de colonnes :
+-- on retire donc tout, puis on redonne colonne par colonne.
+revoke select on profils from public, anon, authenticated;
+grant select (id, prenom, role, secteur, rayon_km, points, avatar_url, bio,
+              raison_sociale, pro_verifie, est_relais, relais_adresse,
+              relais_horaires, created_at, updated_at)
+  on profils to anon, authenticated;
+
+-- Même raisonnement en écriture : sans cela, un membre pourrait porter
+-- son propre solde de points à 99 999 et s'émettre des bons d'achat.
+-- Le solde ne bouge que par les fonctions du serveur.
+revoke update on profils from public, anon, authenticated;
+grant update (prenom, nom, telephone, role, secteur, rayon_km, avatar_url, bio,
+              siret, raison_sociale, est_relais, relais_adresse, relais_horaires,
+              cgu_acceptees_le, updated_at)
+  on profils to authenticated;
+
+/** Le membre récupère sa fiche complète par cette fonction. */
+create or replace function mon_profil()
+returns setof profils as $$
+  select * from public.profils where id = auth.uid();
+$$ language sql stable security definer set search_path = public;

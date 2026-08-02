@@ -8,11 +8,10 @@ export async function profilCourant() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) redirect('/connexion');
 
-  const { data: profil } = await sb
-    .from('profils')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle<Profil>();
+  // mon_profil() : le membre lit sa fiche complète. La table, elle, ne
+  // laisse pas voir le téléphone ni le SIRET des autres.
+  const { data: fiches } = await sb.rpc('mon_profil');
+  const profil = (fiches?.[0] ?? null) as Profil | null;
 
   if (!profil) redirect('/inscription');
 

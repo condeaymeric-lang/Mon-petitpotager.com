@@ -490,3 +490,7 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 @media(min-width:640px){
   .btn,.seg button,.qty button,.fchip,.cat-btn,.var-btn{cursor:pointer}
 }
+
+/* Lien vers la fiche publique d'un membre */
+.lien-membre{color:var(--forest);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.lien-membre:hover{color:var(--forest-2)}

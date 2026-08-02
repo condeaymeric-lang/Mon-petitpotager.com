@@ -143,14 +143,10 @@ export default function ContenuPanier({
         toast("Le bon d'achat n'a pas pu être appliqué : commande au tarif normal.");
       }
     }
-    // Les points de l'achat sont crédités : ils se convertiront en bon plus tard.
-    await sb.rpc('ajouter_points', {
-      p_profil: user.id, p_montant: Math.floor(sousTotal),
-      p_motif: `Achat — ${commande.reference}`, p_commande: commande.id,
-    });
-
+    // Les points ne sont crédités qu'à la confirmation du retrait :
+    // une commande jamais retirée ne doit rien rapporter.
     vider();
-    toast(`Commande confirmée · +${Math.floor(sousTotal)} points`);
+    toast('Commande confirmée');
     router.push(`/commandes/${commande.id}`);
     router.refresh();
   }
@@ -246,7 +242,7 @@ export default function ContenuPanier({
             </div>
           ) : (
             <p className="tiny" style={{ marginTop: 10 }}>
-              Aucun bon disponible. Cumulez des points en achetant, en publiant et en vendant.
+              Aucun bon disponible. Les points se cumulent sur vos achats retirés et en tenant un point relais.
             </p>
           )}
           {bonChoisi && bonChoisi.montant > sousTotal && (

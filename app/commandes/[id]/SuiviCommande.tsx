@@ -31,20 +31,16 @@ export default function SuiviCommande({
     setEnvoi(false);
     if (error) { toast('Mise à jour impossible.'); return; }
 
-    const { data: { user } } = await sb.auth.getUser();
-    if (user) {
-      await sb.rpc('ajouter_points', {
-        p_profil: user.id, p_montant: 5,
-        p_motif: 'Retrait confirmé', p_commande: commandeId,
-      });
-    }
+    // Les points de l'achat sont attribués ici, côté base : l'acheteur
+    // pour sa commande, l'hôte du point relais pour le service rendu.
+    const { data: gain } = await sb.rpc('crediter_retrait', { p_commande: commandeId });
     // Le versement au vendeur n'a lieu qu'ici, après confirmation.
     await sb.from('lignes_commande')
       .update({ verse: true, verse_le: new Date().toISOString() })
       .eq('commande_id', commandeId);
 
     setEtat('retiree');
-    toast('Retrait confirmé');
+    toast(gain && gain > 0 ? `Retrait confirmé · +${gain} points` : 'Retrait confirmé');
     router.refresh();
   }
 

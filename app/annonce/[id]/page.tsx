@@ -75,7 +75,8 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
                 : <>{eur(a.prix)} <small style={{ fontSize: '.85rem' }}>/ {a.unite}</small></>}
             </p>
             <p className="muted">
-              {a.vendeur?.prenom} · {a.commune}
+              <Link href={`/membre/${a.vendeur_id}`} className="lien-membre">{a.vendeur?.prenom}</Link>
+              {' · '}{a.commune}
               {km != null && ` · à ${km} km`} · {a.quantite} disponible{a.quantite > 1 ? 's' : ''}
             </p>
 

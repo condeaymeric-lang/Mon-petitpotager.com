@@ -100,11 +100,7 @@ export default function Formulaire({
       return;
     }
 
-    await sb.rpc('ajouter_points', {
-      p_profil: profil.id, p_montant: 10, p_motif: `Publication — ${produit.nom}`,
-    });
-
-    toast('Annonce publiée · +10 points');
+    toast('Annonce publiée');
     router.push('/vendre/annonces');
     router.refresh();
   }
@@ -376,7 +372,7 @@ export default function Formulaire({
         {envoi ? 'Publication…' : 'Publier mon annonce'}
       </button>
       <p className="tiny center" style={{ marginTop: 11 }}>
-        +10 points à la publication, +20 à chaque vente.
+        Vous serez payé après la confirmation de retrait par l&apos;acheteur.
       </p>
     </div>
   );
