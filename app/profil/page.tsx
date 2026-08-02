@@ -5,6 +5,7 @@ import { eur, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
 import PanneauProfil from './PanneauProfil';
 import BonsAchat from './BonsAchat';
 import ModifierProfil from './ModifierProfil';
+import { MesAnnonces, Raccourcis, type AnnonceCourte } from './MesAnnonces';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,16 @@ export default async function Profil() {
     sb.from('commandes').select('*', { count: 'exact', head: true }).eq('acheteur_id', profil.id),
     sb.from('mouvements_points').select('*').eq('profil_id', profil.id)
       .order('created_at', { ascending: false }).limit(20),
+  ]);
+
+  const [{ data: annonces }, { data: nonLus }] = await Promise.all([
+    sb.from('annonces')
+      .select('id, titre, variete_libre, mode, prix, unite, quantite, statut, photos, est_lot, produit:produits(illustration), variete:varietes(nom, illustration)')
+      .eq('vendeur_id', profil.id)
+      .order('statut')
+      .order('created_at', { ascending: false })
+      .limit(5),
+    sb.rpc('messages_non_lus'),
   ]);
 
   const { data: bons } = await sb.from('bons_achat')
@@ -46,6 +57,12 @@ export default async function Profil() {
           </div>
         </div>
 
+        <Raccourcis
+          estPro={profil.role === 'pro'}
+          moderateur={!!profil.moderateur}
+          nbNonLus={typeof nonLus === 'number' ? nonLus : 0}
+        />
+
         <div className="dash-top">
           <div className="pts-card">
             <small>MES POINTS</small>
@@ -61,6 +78,9 @@ export default async function Profil() {
             </div>
           </div>
         </div>
+
+        <MesAnnonces annonces={(annonces ?? []) as unknown as AnnonceCourte[]}
+          total={nbAnnonces ?? 0} />
 
         {profil.moderateur && (
           <div className="card">
