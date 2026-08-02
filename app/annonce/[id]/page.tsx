@@ -24,9 +24,22 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
 
   if (!a) notFound();
 
+  // Un panier composé : on charge son contenu pour l'afficher et pour
+  // calculer sa référence grande surface, somme de ses composants.
+  const { data: composants } = a.est_lot
+    ? await sb.from('composants_lot')
+        .select('id, quantite, unite, produit:produits(nom, prix_ref, illustration)')
+        .eq('annonce_id', a.id)
+        .order('position')
+    : { data: null };
+
+  const refLot = (composants ?? []).reduce(
+    (t: number, c: any) => t + (c.produit?.prix_ref != null ? c.produit.prix_ref * c.quantite : 0), 0);
+  const composantsSansRef = (composants ?? []).filter((c: any) => c.produit?.prix_ref == null).length;
+
   const nomVariete = a.variete?.nom ?? a.variete_libre ?? null;
   const estMien = connecte && profil ? a.vendeur_id === profil.id : false;
-  const prixRef = a.produit?.prix_ref ?? null;
+  const prixRef = a.est_lot ? (refLot > 0 ? refLot : null) : (a.produit?.prix_ref ?? null);
   const eco = a.mode === 'vente' && prixRef && a.prix < prixRef;
   const pct = eco ? Math.round((1 - a.prix / prixRef) * 100) : 0;
   const km = secteur && a.lat && a.lon
@@ -45,7 +58,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
             <div className="thumb" style={{ aspectRatio: '1.7', borderRadius: 'var(--r-l)', overflow: 'hidden' }}>
               {a.photos?.[0]
                 ? <img src={a.photos[0]} alt={a.titre} />
-                : <Illustration nom={a.variete?.illustration ?? a.produit?.illustration} />}
+                : <Illustration nom={a.variete?.illustration ?? a.produit?.illustration ?? (a.est_lot ? 'bocal' : null)} />}
             </div>
 
             {a.photos?.length > 1 && (
@@ -80,12 +93,35 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
               {km != null && ` · à ${km} km`} · {a.quantite} disponible{a.quantite > 1 ? 's' : ''}
             </p>
 
+            {a.est_lot && composants && composants.length > 0 && (
+              <div className="card" style={{ marginTop: 14 }}>
+                <h3>Ce que contient le panier</h3>
+                <div className="lot-contenu">
+                  {composants.map((c: any) => (
+                    <div className="lot-l" key={c.id}>
+                      <span><Illustration nom={c.produit?.illustration} /></span>
+                      {c.produit?.nom}
+                      <b>{(+c.quantite).toLocaleString('fr-FR')} {c.unite}</b>
+                    </div>
+                  ))}
+                </div>
+                <p className="tiny" style={{ marginTop: 10 }}>
+                  Le contenu peut varier légèrement selon la récolte.
+                </p>
+              </div>
+            )}
+
             {eco && (
               <div className="priceref">
-                <b>{eur(prixRef)} en grande surface pour le même produit</b>
+                <b>
+                  {eur(prixRef)} en grande surface pour {a.est_lot ? 'le même contenu' : 'le même produit'}
+                </b>
                 <p>
-                  Vous économisez {eur(prixRef - a.prix)} par {a.unite}, et l'argent reste
+                  Vous économisez {eur(prixRef - a.prix)}
+                  {a.est_lot ? ' sur ce panier' : ` par ${a.unite}`}, et l'argent reste
                   chez votre voisin plutôt que dans une centrale d'achat.
+                  {a.est_lot && composantsSansRef > 0
+                    && ` ${composantsSansRef} produit${composantsSansRef > 1 ? 's' : ''} du panier n'${composantsSansRef > 1 ? 'ont' : 'a'} pas de prix de référence connu et n'${composantsSansRef > 1 ? 'entrent' : 'entre'} pas dans ce calcul.`}
                 </p>
               </div>
             )}

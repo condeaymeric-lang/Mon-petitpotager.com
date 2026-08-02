@@ -72,6 +72,8 @@ export interface AnnonceProche {
   vendeur_id: string;
   vendeur_avatar: string | null;
   illustration: string | null;
+  est_lot?: boolean;
+  nb_composants?: number;
   created_at: string;
 }
 

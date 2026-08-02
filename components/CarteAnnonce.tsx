@@ -19,7 +19,9 @@ export default function CarteAnnonce({
         <span className={`badge tag ${a.mode === 'troc' ? 'b-troc' : a.mode === 'don' ? 'b-don' : a.vendeur_pro ? 'b-pro' : 'b-am'}`}>
           {a.mode === 'troc' ? 'Troc' : a.mode === 'don' ? 'Don' : a.vendeur_pro ? 'Pro' : 'Voisin'}
         </span>
-        {saison && <span className="badge b-sais tag2">Saison</span>}
+        {a.est_lot
+          ? <span className="badge b-am tag2">Panier · {a.nb_composants} produits</span>
+          : saison && <span className="badge b-sais tag2">Saison</span>}
       </div>
       <div className="item-b">
         <h4>{a.titre}</h4>

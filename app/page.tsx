@@ -58,7 +58,12 @@ export default async function Accueil({
     annoncesEnAvant(secteur.lat, secteur.lon, rayonKm, 12),
   ]);
 
-  const categories = [...new Set(produits.map((p) => p.categorie))];
+  // « Paniers » n'est pas une catégorie du catalogue : c'est un filtre
+  // sur les lots composés, ajouté seulement s'il y en a dans le rayon.
+  const categories = [
+    ...(annonces.some((a) => a.est_lot) || searchParams.cat === 'Paniers' ? ['Paniers'] : []),
+    ...new Set(produits.map((p) => p.categorie)),
+  ];
   const saisonParProduit = new Map(produits.map((p) => [p.nom, p.mois_saison]));
   const nbSaison = annonces.filter((a) => estDeSaison(saisonParProduit.get(a.produit ?? ''))).length;
 

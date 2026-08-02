@@ -15,6 +15,15 @@ interface Bon {
   expire_le: string;
 }
 
+interface Casier {
+  id: string;
+  nom: string;
+  adresse: string;
+  horaires: string | null;
+  actif: boolean;
+  distance_km: number;
+}
+
 interface Relais {
   id: string;
   prenom: string;
@@ -22,14 +31,20 @@ interface Relais {
   relais_horaires: string | null;
 }
 
+type ModeRetrait = 'relais' | 'main_propre' | 'casier' | 'livraison';
+
 export default function ContenuPanier({
-  points, secteurCode, commune, relais,
-}: { points: number; secteurCode: string | null; commune: string; relais: Relais[] }) {
+  points, secteurCode, commune, relais, casiers,
+}: {
+  points: number; secteurCode: string | null; commune: string;
+  relais: Relais[]; casiers: Casier[];
+}) {
   const { lignes, sousTotal, totalReference, modifier, vider } = usePanier();
   const [bons, setBons] = useState<Bon[]>([]);
   const [bonId, setBonId] = useState('');
-  const [retrait, setRetrait] = useState<'relais' | 'main_propre'>(relais.length > 0 ? 'relais' : 'main_propre');
+  const [retrait, setRetrait] = useState<ModeRetrait>(relais.length > 0 ? 'relais' : 'main_propre');
   const [relaisId, setRelaisId] = useState(relais[0]?.id ?? '');
+  const [casierId, setCasierId] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const router = useRouter();
   const toast = useToast();
@@ -66,6 +81,12 @@ export default function ContenuPanier({
   async function valider() {
     if (!lignes.length) return;
     if (retrait === 'relais' && !relaisId) { toast('Choisissez un point relais.'); return; }
+    if (retrait === 'casier') {
+      const c = casiers.find((x) => x.id === casierId);
+      if (!c) { toast('Choisissez un casier.'); return; }
+      if (!c.actif) { toast("Ce casier n'est pas encore en service."); return; }
+    }
+    if (retrait === 'livraison') { toast("La livraison n'est pas encore en service."); return; }
     setEnvoi(true);
     const sb = creerClient();
 
@@ -73,9 +94,12 @@ export default function ContenuPanier({
     if (!user) { setEnvoi(false); router.push('/connexion'); return; }
 
     const relaisChoisi = relais.find((r) => r.id === relaisId);
+    const casierChoisi = casiers.find((c) => c.id === casierId);
     const adresse = retrait === 'relais' && relaisChoisi
       ? `${relaisChoisi.relais_adresse}, ${commune}`
-      : 'Remise en main propre';
+      : retrait === 'casier' && casierChoisi
+        ? `${casierChoisi.nom}, ${casierChoisi.adresse}`
+        : 'Remise en main propre';
 
     const { data: commande, error } = await sb.from('commandes').insert({
       acheteur_id: user.id,
@@ -88,6 +112,7 @@ export default function ContenuPanier({
       total,
       mode_retrait: retrait,
       relais_id: retrait === 'relais' ? relaisId : null,
+      casier_id: retrait === 'casier' ? casierId : null,
       adresse_retrait: adresse,
       statut: 'confirmee',
       paye_le: new Date().toISOString(),
@@ -269,8 +294,8 @@ export default function ContenuPanier({
       </div>
 
       <div className="field" style={{ marginTop: 16 }}>
-        <label id="retrait-label">Retrait</label>
-        <div className="seg" role="group" aria-labelledby="retrait-label">
+        <label id="retrait-label">Retrait ou livraison</label>
+        <div className="seg seg-4" role="group" aria-labelledby="retrait-label">
           {relais.length > 0 && (
             <button type="button" className={retrait === 'relais' ? 'on' : ''} onClick={() => setRetrait('relais')}>
               Point relais
@@ -279,7 +304,14 @@ export default function ContenuPanier({
           <button type="button" className={retrait === 'main_propre' ? 'on' : ''} onClick={() => setRetrait('main_propre')}>
             Main propre
           </button>
+          <button type="button" className={retrait === 'casier' ? 'on' : ''} onClick={() => setRetrait('casier')}>
+            Casier frais
+          </button>
+          <button type="button" className={retrait === 'livraison' ? 'on' : ''} onClick={() => setRetrait('livraison')}>
+            Livraison
+          </button>
         </div>
+
         {retrait === 'relais' && (
           relais.length > 0 ? (
             <div className="var-list" style={{ marginTop: 10 }}>
@@ -299,6 +331,59 @@ export default function ContenuPanier({
               Aucun point relais n'est encore disponible dans ce secteur.
             </p>
           )
+        )}
+
+        {retrait === 'casier' && (
+          <>
+            <p className="avert" style={{ marginTop: 10 }}>
+              Les casiers réfrigérés dépendent de partenariats en cours de
+              discussion. Aucun n'est en service pour le moment.
+            </p>
+            {casiers.length > 0 ? (
+              <div className="var-list" style={{ marginTop: 10 }}>
+                {casiers.map((c) => (
+                  <button key={c.id} type="button" disabled={!c.actif}
+                    className={`var-btn${casierId === c.id ? ' on' : ''}`}
+                    onClick={() => setCasierId(c.id)}>
+                    <div>
+                      <b>{c.nom} · à {c.distance_km} km</b>
+                      <span>
+                        {c.adresse}{c.horaires ? ` · ${c.horaires}` : ''}
+                        {!c.actif && ' · pas encore en service'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="tiny" style={{ marginTop: 8 }}>
+                Aucun casier n'est recensé dans votre rayon.
+              </p>
+            )}
+          </>
+        )}
+
+        {retrait === 'livraison' && (
+          <>
+            <p className="avert" style={{ marginTop: 10 }}>
+              La livraison à domicile n'est pas encore en service. Elle passera
+              par un transporteur partenaire, qui reste à désigner.
+            </p>
+            <div className="var-list" style={{ marginTop: 10 }}>
+              <button type="button" className="var-btn" disabled>
+                <div>
+                  <b>Transporteur partenaire</b>
+                  <span>Livraison le jour même, créneau au choix — à venir</span>
+                </div>
+              </button>
+              <button type="button" className="var-btn" disabled>
+                <div>
+                  <b>Tournée locale groupée</b>
+                  <span>Un passage par secteur, plusieurs commandes — à venir</span>
+                </div>
+              </button>
+            </div>
+          </>
         )}
       </div>
 

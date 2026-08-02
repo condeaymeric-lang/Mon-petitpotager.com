@@ -1055,3 +1055,173 @@ create or replace function mon_profil()
 returns setof profils as $$
   select * from public.profils where id = auth.uid();
 $$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  PANIERS COMPOSÉS
+--  Une annonce peut regrouper plusieurs produits vendus ensemble :
+--  6 tomates, 12 abricots et 2 salades pour un prix unique. Le prix
+--  de référence du lot est la somme des références de ses produits,
+--  ce qui rend la comparaison avec la grande surface vérifiable.
+-- ═══════════════════════════════════════════════════════════════
+alter table annonces add column if not exists est_lot boolean default false not null;
+
+create table if not exists composants_lot (
+  id         uuid primary key default uuid_generate_v4(),
+  annonce_id uuid references annonces(id) on delete cascade not null,
+  produit_id int  references produits(id) not null,
+  variete_id int  references varietes(id),
+  quantite   numeric(8,2) not null check (quantite > 0),
+  unite      text not null,
+  position   int default 0 not null
+);
+create index if not exists idx_composants_annonce on composants_lot (annonce_id, position);
+
+alter table composants_lot enable row level security;
+
+drop policy if exists lecture_composants on composants_lot;
+create policy lecture_composants on composants_lot for select using (true);
+drop policy if exists ecriture_composants on composants_lot;
+create policy ecriture_composants on composants_lot for all
+  using (exists (select 1 from annonces a
+                  where a.id = annonce_id and a.vendeur_id = auth.uid()))
+  with check (exists (select 1 from annonces a
+                       where a.id = annonce_id and a.vendeur_id = auth.uid()));
+
+/** Prix grande surface équivalent d'un lot : somme de ses composants. */
+create or replace function prix_reference_lot(p_annonce uuid)
+returns numeric as $$
+  select round(sum(c.quantite * p.prix_ref), 2)
+    from composants_lot c
+    join produits p on p.id = c.produit_id
+   where c.annonce_id = p_annonce
+     and p.prix_ref is not null;
+$$ language sql stable;
+
+-- ═══════════════════════════════════════════════════════════════
+--  CASIERS RÉFRIGÉRÉS
+--  Emplacements tenus par des partenaires. Aucun n'est actif tant
+--  qu'un partenariat n'est pas signé : la colonne « actif » dit la
+--  vérité au lieu de laisser croire à un service disponible.
+-- ═══════════════════════════════════════════════════════════════
+create table if not exists casiers (
+  id         uuid primary key default uuid_generate_v4(),
+  nom        text not null,
+  secteur    text references secteurs(code_insee) not null,
+  adresse    text not null,
+  horaires   text,
+  lat        double precision,
+  lon        double precision,
+  geo        geography(point, 4326),
+  actif      boolean default false not null,
+  created_at timestamptz default now()
+);
+create index if not exists idx_casiers_geo on casiers using gist (geo);
+
+alter table casiers enable row level security;
+drop policy if exists lecture_casiers on casiers;
+create policy lecture_casiers on casiers for select using (true);
+-- Aucune écriture depuis l'application : les emplacements sont posés
+-- par l'exploitant, pas par les membres.
+
+create or replace function maj_geo_casier() returns trigger as $$
+begin
+  if new.lat is not null and new.lon is not null then
+    new.geo := st_point(new.lon, new.lat)::geography;
+  end if;
+  return new;
+end $$ language plpgsql;
+
+drop trigger if exists trg_geo_casier on casiers;
+create trigger trg_geo_casier before insert or update on casiers
+  for each row execute function maj_geo_casier();
+
+/** Casiers du rayon. Même règle que le reste : rien au-delà. */
+create or replace function casiers_autour(
+  p_lat double precision, p_lon double precision, p_rayon_km int default 20
+)
+returns table (id uuid, nom text, adresse text, horaires text,
+               actif boolean, distance_km numeric) as $$
+  select c.id, c.nom, c.adresse, c.horaires, c.actif,
+         round((st_distance(c.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1)
+    from casiers c
+   where st_dwithin(c.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+   order by 6;
+$$ language sql stable;
+
+-- Nouveaux modes de retrait sur les commandes.
+alter table commandes add column if not exists casier_id uuid references casiers(id) on delete set null;
+
+-- Les lots entrent dans la liste : leur prix de référence est la somme
+-- de leurs composants, et leur catégorie est celle du produit dominant.
+drop function if exists annonces_autour(double precision, double precision, int, text, int);
+create or replace function annonces_autour(
+  p_lat double precision,
+  p_lon double precision,
+  p_rayon_km int default 20,
+  p_categorie text default null,
+  p_limite int default 60
+)
+returns table (
+  id uuid, titre text, description text, mode mode_transaction,
+  prix numeric, unite text, quantite int, commune text,
+  photos text[], categorie text, produit text, variete text,
+  prix_ref numeric, distance_km numeric,
+  vendeur_prenom text, vendeur_pro boolean, vendeur_id uuid, vendeur_avatar text,
+  illustration text, est_lot boolean, nb_composants int,
+  created_at timestamptz
+) as $$
+  select
+    a.id, a.titre, a.description, a.mode,
+    a.prix, a.unite, a.quantite, a.commune,
+    a.photos,
+    coalesce(p.categorie, case when a.est_lot then 'Paniers' end),
+    p.nom, coalesce(v.nom, a.variete_libre),
+    case when a.est_lot then prix_reference_lot(a.id) else p.prix_ref end,
+    round((st_distance(a.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+    pr.prenom, pr.pro_verifie, pr.id, pr.avatar_url,
+    coalesce(v.illustration, p.illustration,
+             case when a.est_lot then 'bocal' end),
+    a.est_lot,
+    (select count(*)::int from composants_lot c where c.annonce_id = a.id),
+    a.created_at
+  from annonces a
+  join profils pr on pr.id = a.vendeur_id
+  left join produits p on p.id = a.produit_id
+  left join varietes v on v.id = a.variete_id
+  where a.statut = 'en_ligne'
+    and a.quantite > 0
+    and st_dwithin(a.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+    and (p_categorie is null
+         or p.categorie = p_categorie
+         or (p_categorie = 'Paniers' and a.est_lot))
+  order by
+    (a.boost_jusqu_a is not null and a.boost_jusqu_a > now()) desc,
+    a.created_at desc
+  limit p_limite;
+$$ language sql stable;
+
+/**
+ * Un lot ne doit pas servir de contournement : sans ce contrôle, un
+ * particulier pourrait glisser une terrine dans un panier composé,
+ * puisque le lot lui-même n'a pas de produit_id.
+ */
+create or replace function verifier_composant_lot() returns trigger as $$
+declare est_transforme boolean; role_vendeur role_user;
+begin
+  select p.transforme into est_transforme
+    from public.produits p where p.id = new.produit_id;
+  select pr.role into role_vendeur
+    from public.profils pr
+    join public.annonces a on a.vendeur_id = pr.id
+   where a.id = new.annonce_id;
+
+  if coalesce(est_transforme, false) and role_vendeur <> 'pro' then
+    raise exception 'Ce produit transformé est réservé aux comptes professionnels.'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_composant_lot on composants_lot;
+create trigger trg_composant_lot before insert or update on composants_lot
+  for each row execute function verifier_composant_lot();

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { creerClient } from '@/lib/supabase-client';
 import { useToast } from '@/components/Toast';
 import { Illustration } from '@/components/Illustrations';
@@ -135,6 +136,15 @@ export default function Formulaire({
           <h1>Que proposez-vous ?</h1>
           <p>Cherchez votre produit, ou parcourez les catégories.</p>
         </div>
+
+        <Link href="/vendre/publier/panier" className="carte-lot">
+          <span className="carte-lot-ill"><Illustration nom="bocal" /></span>
+          <span>
+            <b>Composer un panier</b>
+            <span>Plusieurs produits vendus ensemble à un prix unique.</span>
+          </span>
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+        </Link>
 
         <div className="field">
           <label htmlFor="rp">Rechercher un produit</label>
