@@ -262,13 +262,23 @@ export default function FormulaireEvenement({
         <div className="field">
           <label id="photos-label">Photos</label>
           <p className="help">
-            Jusqu&apos;à six photos. Avant l&apos;événement, une affiche ou le lieu ;
-            après, ce qu&apos;il s&apos;y est passé.
+            Jusqu&apos;à six photos. La première sert d&apos;affiche : c&apos;est
+            elle qu&apos;on voit dans la liste des événements, sans avoir à
+            ouvrir la fiche.
           </p>
           <div className="evt-photos" role="group" aria-labelledby="photos-label">
             {photos.map((url, i) => (
-              <div className="evt-photo" key={url}>
+              <div className={`evt-photo${i === 0 ? ' evt-photo-affiche' : ''}`} key={url}>
                 <img src={url} alt="" loading="lazy" />
+                {i === 0
+                  ? <span className="evt-tag">Affiche</span>
+                  : (
+                    <button type="button" className="evt-tag evt-tag-b"
+                      aria-label={`Mettre la photo ${i + 1} en affiche`}
+                      onClick={() => setPhotos((p) => [url, ...p.filter((x) => x !== url)])}>
+                      Mettre en affiche
+                    </button>
+                  )}
                 <button type="button" className="btn-x" aria-label={`Retirer la photo ${i + 1}`}
                   onClick={() => setPhotos((p) => p.filter((x) => x !== url))}>×</button>
               </div>

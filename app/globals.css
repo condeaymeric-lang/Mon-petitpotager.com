@@ -740,3 +740,23 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .fil-sugg .fchip{white-space:normal;text-align:left}
 .fil-saisie{position:sticky;bottom:calc(74px + env(safe-area-inset-bottom));z-index:6}
 @media(min-width:760px){.fil-saisie{bottom:14px}}
+
+/* ── Affiche d'un événement ── */
+.event-illustre{flex-direction:column;gap:0;padding:0;overflow:hidden}
+.event-affiche{position:relative;aspect-ratio:2.2;background:var(--cream)}
+.event-affiche img{width:100%;height:100%;object-fit:cover;display:block}
+.event-date-sur{position:absolute;left:12px;bottom:12px;width:52px;
+  background:rgba(255,255,255,.95);box-shadow:var(--sh-s);padding:7px 4px}
+.event-nb{position:absolute;right:12px;bottom:12px;padding:4px 10px;border-radius:999px;
+  background:rgba(20,52,36,.82);color:#fff;font-size:.72rem;font-weight:600}
+.event-illustre .event-b{padding:14px 15px 15px}
+.event-illustre .event-b h4{margin-top:7px}
+.evt-affiche-grande{display:block;border-radius:var(--r-l);overflow:hidden;
+  border:1px solid var(--line);background:var(--cream);margin-bottom:16px}
+.evt-affiche-grande img{width:100%;max-height:340px;object-fit:cover;display:block}
+.evt-photo-affiche{outline:2px solid var(--leaf);outline-offset:-2px}
+.evt-tag{position:absolute;left:5px;bottom:5px;padding:3px 8px;border-radius:999px;
+  background:rgba(20,52,36,.86);color:#fff;font-size:.68rem;font-weight:600;line-height:1.3}
+.evt-tag-b{background:rgba(255,255,255,.94);color:var(--forest);cursor:pointer;
+  min-height:30px;padding:6px 9px}
+.evt-tag-b:hover{background:#fff}

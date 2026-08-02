@@ -56,6 +56,12 @@ export default async function PageEvenement({ params }: { params: { id: string }
           {passe && !e.annule && <span className="badge b-done">Passé</span>}
         </div>
 
+        {photos.length > 0 && (
+          <a className="evt-affiche-grande" href={photos[0]} target="_blank" rel="noopener noreferrer">
+            <img src={photos[0]} alt={`Affiche de ${e.titre}`} />
+          </a>
+        )}
+
         <div className="page-head">
           <h1>{e.titre}</h1>
           <p>Proposé par {e.auteur?.prenom}.</p>
@@ -81,11 +87,11 @@ export default async function PageEvenement({ params }: { params: { id: string }
           </div>
         )}
 
-        {photos.length > 0 && (
+        {photos.length > 1 && (
           <div className="card">
             <h3>Photos</h3>
             <div className="evt-photos" style={{ marginTop: 10 }}>
-              {photos.map((url) => (
+              {photos.slice(1).map((url) => (
                 <a className="evt-photo" key={url} href={url} target="_blank" rel="noopener noreferrer">
                   <img src={url} alt="" loading="lazy" />
                 </a>

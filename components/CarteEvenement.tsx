@@ -21,12 +21,32 @@ export function heureLisible(iso: string) {
 
 export default function CarteEvenement({ evenement: e }: { evenement: EvenementProche }) {
   const d = new Date(e.debut);
+  // La première photo sert d'affiche : sans elle, il fallait entrer dans
+  // l'événement pour voir à quoi il ressemble.
+  const affiche = e.photos?.[0] ?? null;
+
   return (
-    <Link href={`/evenements/${e.id}`} className="event">
-      <div className="event-date" aria-hidden="true">
-        <b>{d.getDate()}</b>
-        <span>{d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</span>
-      </div>
+    <Link href={`/evenements/${e.id}`} className={`event${affiche ? ' event-illustre' : ''}`}>
+      {affiche && (
+        <div className="event-affiche">
+          <img src={affiche} alt="" loading="lazy" />
+          <span className="event-date event-date-sur" aria-hidden="true">
+            <b>{d.getDate()}</b>
+            <span>{d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</span>
+          </span>
+          {e.photos.length > 1 && (
+            <span className="event-nb">{e.photos.length} photos</span>
+          )}
+        </div>
+      )}
+
+      {!affiche && (
+        <div className="event-date" aria-hidden="true">
+          <b>{d.getDate()}</b>
+          <span>{d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</span>
+        </div>
+      )}
+
       <div className="event-b">
         <span className="badge b-am">{LIBELLE_TYPE[e.type]}</span>
         <h4>{e.titre}</h4>
