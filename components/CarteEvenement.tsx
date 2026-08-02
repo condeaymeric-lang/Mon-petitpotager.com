@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { EvenementProche, TypeEvenement } from '@/lib/types';
 
 export const LIBELLE_TYPE: Record<TypeEvenement, string> = {
@@ -21,7 +22,7 @@ export function heureLisible(iso: string) {
 export default function CarteEvenement({ evenement: e }: { evenement: EvenementProche }) {
   const d = new Date(e.debut);
   return (
-    <article className="event">
+    <Link href={`/evenements/${e.id}`} className="event">
       <div className="event-date" aria-hidden="true">
         <b>{d.getDate()}</b>
         <span>{d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</span>
@@ -37,9 +38,13 @@ export default function CarteEvenement({ evenement: e }: { evenement: EvenementP
         <div className="item-meta">
           <span>{e.commune}</span>
           <span>{e.distance_km} km</span>
-          <span>Proposé par {e.auteur_prenom}</span>
+          {e.nb_oui > 0 && (
+            <span className="event-oui">
+              {e.nb_oui} voisin{e.nb_oui > 1 ? 's y vont' : ' y va'}
+            </span>
+          )}
         </div>
       </div>
-    </article>
+    </Link>
   );
 }

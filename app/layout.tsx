@@ -3,6 +3,7 @@ import './globals.css';
 import 'leaflet/dist/leaflet.css';
 import { ToastProvider } from '@/components/Toast';
 import { PanierProvider } from '@/components/PanierContext';
+import BandeauConstruction from '@/components/BandeauConstruction';
 
 export const metadata: Metadata = {
   title: 'monpetitpotager.com — Cultivons le bon, partageons le meilleur',
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <BandeauConstruction />
         <ToastProvider>
           <PanierProvider>{children}</PanierProvider>
         </ToastProvider>

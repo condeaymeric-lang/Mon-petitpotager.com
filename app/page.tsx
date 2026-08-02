@@ -4,6 +4,8 @@ import { BarreHaut, BarreBas } from '@/components/Navigation';
 import CarteAnnonce from '@/components/CarteAnnonce';
 import CarteEvenement from '@/components/CarteEvenement';
 import PiedDePage from '@/components/PiedDePage';
+import BlocMeteo from '@/components/Meteo';
+import { meteoSecteur } from '@/lib/meteo';
 import { Illustration } from '@/components/Illustrations';
 import { estDeSaison, SEUIL_OUVERTURE } from '@/lib/utils';
 import ListeAttente from './ListeAttente';
@@ -40,10 +42,11 @@ export default async function Accueil({
     );
   }
 
-  const [annonces, { produits }, evenements] = await Promise.all([
+  const [annonces, { produits }, evenements, meteo] = await Promise.all([
     annoncesAutour(secteur.lat, secteur.lon, profil.rayon_km, searchParams.cat),
     catalogue(),
     evenementsAutour(secteur.lat, secteur.lon, profil.rayon_km, 3),
+    meteoSecteur(secteur.lat, secteur.lon, secteur.nom),
   ]);
 
   const categories = [...new Set(produits.map((p) => p.categorie))];
@@ -86,6 +89,8 @@ export default async function Accueil({
               <Link className="btn btn-p" href="/vendre/publier">Publier une annonce</Link>
             </div>
           )}
+
+          {meteo && <BlocMeteo meteo={meteo} />}
 
           <section className="bloc" aria-labelledby="titre-evenements">
             <div className="bloc-head">

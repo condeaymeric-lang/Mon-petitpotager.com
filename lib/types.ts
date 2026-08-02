@@ -104,4 +104,5 @@ export interface EvenementProche {
   distance_km: number;
   auteur_prenom: string;
   auteur_id: string;
+  nb_oui: number;
 }

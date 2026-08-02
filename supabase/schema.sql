@@ -541,3 +541,61 @@ drop policy if exists ecriture_contact on messages_contact;
 create policy ecriture_contact on messages_contact for insert with check (true);
 drop policy if exists lecture_contact on messages_contact;
 create policy lecture_contact on messages_contact for select using (profil_id = auth.uid());
+
+-- ═══════════════════════════════════════════════════════════════
+--  PARTICIPATIONS AUX ÉVÉNEMENTS
+--  « Comptez-vous y faire un tour ? » — permet à l'organisateur de
+--  savoir combien de personnes son annonce touche réellement.
+-- ═══════════════════════════════════════════════════════════════
+create table if not exists participations (
+  id           uuid primary key default uuid_generate_v4(),
+  evenement_id uuid references evenements(id) on delete cascade not null,
+  profil_id    uuid references profils(id) on delete cascade not null,
+  vient        boolean not null,
+  created_at   timestamptz default now(),
+  unique (evenement_id, profil_id)
+);
+create index if not exists idx_participations_evt on participations (evenement_id);
+
+alter table participations enable row level security;
+
+-- Les réponses sont visibles de tous : c'est l'intérêt du dispositif,
+-- savoir qui vient. Chacun ne peut répondre que pour lui-même.
+drop policy if exists lecture_participations on participations;
+create policy lecture_participations on participations for select using (true);
+drop policy if exists creation_participation on participations;
+create policy creation_participation on participations for insert with check (profil_id = auth.uid());
+drop policy if exists maj_participation on participations;
+create policy maj_participation on participations for update using (profil_id = auth.uid());
+drop policy if exists suppr_participation on participations;
+create policy suppr_participation on participations for delete using (profil_id = auth.uid());
+
+-- On ajoute le nombre de participants à la liste des événements proches.
+drop function if exists evenements_autour(double precision, double precision, int, int);
+create or replace function evenements_autour(
+  p_lat double precision,
+  p_lon double precision,
+  p_rayon_km int default 20,
+  p_limite int default 20
+)
+returns table (
+  id uuid, titre text, description text, type type_evenement,
+  debut timestamptz, fin timestamptz, lieu text, commune text,
+  photos text[], distance_km numeric, auteur_prenom text, auteur_id uuid,
+  nb_oui bigint
+) as $$
+  select
+    e.id, e.titre, e.description, e.type,
+    e.debut, e.fin, e.lieu, e.commune,
+    e.photos,
+    round((st_distance(e.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+    pr.prenom, pr.id,
+    (select count(*) from participations pa where pa.evenement_id = e.id and pa.vient)
+  from evenements e
+  join profils pr on pr.id = e.auteur_id
+  where e.annule = false
+    and e.debut > now() - interval '12 hours'
+    and st_dwithin(e.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+  order by e.debut asc
+  limit p_limite;
+$$ language sql stable;
