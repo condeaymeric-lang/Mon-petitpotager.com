@@ -25,11 +25,13 @@ const ONGLETS = {
   ],
 };
 
-// La barre du bas ne peut pas tout porter : quatre entrées plus le
-// bouton central, au-delà les cibles deviennent trop petites.
+// La barre du bas porte cinq entrées plus le bouton central : c'est la
+// densité d'origine, et elle laisse encore 44 px de cible par onglet.
+// Les entrées absentes d'ici restent atteignables depuis le profil et
+// le tableau de bord.
 const MOBILE = {
-  acheter: ['accueil', 'messages', 'panier', 'profil'],
-  vendre: ['vendre', 'cmd-vendeur', 'messages', 'profil'],
+  acheter: ['accueil', 'commandes', 'messages', 'panier', 'profil'],
+  vendre: ['vendre', 'cmd-vendeur', 'gestion', 'messages', 'profil'],
 };
 
 const PRODUCTEURS = {
