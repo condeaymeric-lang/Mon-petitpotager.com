@@ -6,6 +6,7 @@ import BarreVisiteur from '@/components/BarreVisiteur';
 import { Illustration } from '@/components/Illustrations';
 import { FicheDetails } from '@/components/FicheDetails';
 import { eur, distanceKm } from '@/lib/utils';
+import BoutonEcrire from '@/components/BoutonEcrire';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,6 +100,12 @@ export default async function FicheMembre({ params }: { params: { id: string } }
               {m.relais_adresse}
               {m.relais_horaires ? ` — ${m.relais_horaires}` : ''}
             </p>
+          </div>
+        )}
+
+        {profil && !soiMeme && (
+          <div style={{ marginBottom: 10 }}>
+            <BoutonEcrire destinataireId={m.id} libelle={`Écrire à ${m.prenom}`} variante="btn-p" />
           </div>
         )}
 

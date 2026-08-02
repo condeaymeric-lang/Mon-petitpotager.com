@@ -7,6 +7,7 @@ import PiedDePage from '@/components/PiedDePage';
 import { Illustration } from '@/components/Illustrations';
 import { eur, estDeSaison, distanceKm } from '@/lib/utils';
 import BoutonPanier from './BoutonPanier';
+import BoutonEcrire from '@/components/BoutonEcrire';
 
 export const dynamic = 'force-dynamic';
 
@@ -162,6 +163,16 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
                   prix_ref: prixRef,
                 }}
               />
+            )}
+
+            {connecte && !estMien && (
+              <div style={{ marginTop: 10 }}>
+                <BoutonEcrire destinataireId={a.vendeur_id} annonceId={a.id} />
+                <p className="tiny center" style={{ marginTop: 10 }}>
+                  Pour demander si c&apos;est encore disponible, convenir d&apos;une
+                  heure de retrait, ou discuter du prix.
+                </p>
+              </div>
             )}
           </div>
         </div>

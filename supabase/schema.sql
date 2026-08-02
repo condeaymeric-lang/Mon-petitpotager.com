@@ -1718,3 +1718,175 @@ returns table (
    where pu.evenement_id = p_evenement
    order by pu.created_at desc;
 $$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  MESSAGERIE INTERNE
+--  Demander si un produit est encore disponible, convenir d'une
+--  heure de retrait, discuter d'un prix. Une conversation lie deux
+--  membres, éventuellement à propos d'une annonce précise.
+-- ═══════════════════════════════════════════════════════════════
+create table if not exists conversations (
+  id            uuid primary key default uuid_generate_v4(),
+  annonce_id    uuid references annonces(id) on delete set null,
+  -- Le couple est rangé dans un ordre fixe : sans cela, A→B et B→A
+  -- créeraient deux fils pour la même discussion.
+  membre_min    uuid references profils(id) on delete cascade not null,
+  membre_max    uuid references profils(id) on delete cascade not null,
+  sujet         text,
+  dernier_le    timestamptz default now() not null,
+  created_at    timestamptz default now(),
+  check (membre_min < membre_max)
+);
+create unique index if not exists idx_conv_unique
+  on conversations (membre_min, membre_max, coalesce(annonce_id, '00000000-0000-0000-0000-000000000000'::uuid));
+create index if not exists idx_conv_membres on conversations (membre_min, dernier_le desc);
+create index if not exists idx_conv_membres2 on conversations (membre_max, dernier_le desc);
+
+create table if not exists messages_prives (
+  id              uuid primary key default uuid_generate_v4(),
+  conversation_id uuid references conversations(id) on delete cascade not null,
+  auteur_id       uuid references profils(id) on delete cascade not null,
+  texte           text not null check (length(trim(texte)) between 1 and 2000),
+  prix_propose    numeric(8,2) check (prix_propose is null or prix_propose >= 0),
+  lu_le           timestamptz,
+  created_at      timestamptz default now()
+);
+create index if not exists idx_msg_conv on messages_prives (conversation_id, created_at);
+
+alter table conversations enable row level security;
+alter table messages_prives enable row level security;
+
+drop policy if exists lecture_conv on conversations;
+create policy lecture_conv on conversations for select
+  using (auth.uid() in (membre_min, membre_max));
+drop policy if exists maj_conv on conversations;
+create policy maj_conv on conversations for update
+  using (auth.uid() in (membre_min, membre_max));
+-- Création uniquement par ouvrir_conversation() : la règle du rayon s'y vérifie.
+
+drop policy if exists lecture_msg on messages_prives;
+create policy lecture_msg on messages_prives for select
+  using (exists (select 1 from conversations c
+                  where c.id = conversation_id
+                    and auth.uid() in (c.membre_min, c.membre_max)));
+drop policy if exists creation_msg on messages_prives;
+create policy creation_msg on messages_prives for insert
+  with check (auteur_id = auth.uid()
+    and exists (select 1 from conversations c
+                 where c.id = conversation_id
+                   and auth.uid() in (c.membre_min, c.membre_max)));
+drop policy if exists maj_msg on messages_prives;
+create policy maj_msg on messages_prives for update
+  using (exists (select 1 from conversations c
+                  where c.id = conversation_id
+                    and auth.uid() in (c.membre_min, c.membre_max)));
+drop policy if exists suppr_msg on messages_prives;
+create policy suppr_msg on messages_prives for delete
+  using (auteur_id = auth.uid() or est_moderateur());
+
+/**
+ * Ouvre une conversation, ou retrouve celle qui existe déjà.
+ * La règle du rayon vaut ici aussi : on n'écrit pas à quelqu'un qu'on
+ * ne pourrait pas voir. Sans quoi la messagerie serait une porte
+ * dérobée pour contacter la France entière.
+ */
+create or replace function ouvrir_conversation(p_destinataire uuid, p_annonce uuid default null)
+returns uuid as $$
+declare
+  v_moi uuid := auth.uid();
+  v_min uuid; v_max uuid;
+  v_conv uuid;
+  v_km numeric;
+  v_sujet text;
+begin
+  if v_moi is null then
+    raise exception 'Connexion requise.' using errcode = 'check_violation';
+  end if;
+  if p_destinataire = v_moi then
+    raise exception 'On ne s''écrit pas à soi-même.' using errcode = 'check_violation';
+  end if;
+
+  select round((st_distance(sa.geo_pt, sb.geo_pt) / 1000)::numeric, 1) into v_km
+    from (select st_point(s.lon, s.lat)::geography as geo_pt, p.rayon_km
+            from profils p join secteurs s on s.code_insee = p.secteur
+           where p.id = v_moi) sa,
+         (select st_point(s.lon, s.lat)::geography as geo_pt
+            from profils p join secteurs s on s.code_insee = p.secteur
+           where p.id = p_destinataire) sb;
+
+  if v_km is null or v_km > (select rayon_km from profils where id = v_moi) then
+    raise exception 'Ce membre est hors de votre rayon.' using errcode = 'check_violation';
+  end if;
+
+  v_min := least(v_moi, p_destinataire);
+  v_max := greatest(v_moi, p_destinataire);
+
+  select id into v_conv from conversations
+   where membre_min = v_min and membre_max = v_max
+     and coalesce(annonce_id, '00000000-0000-0000-0000-000000000000'::uuid)
+       = coalesce(p_annonce, '00000000-0000-0000-0000-000000000000'::uuid);
+  if v_conv is not null then return v_conv; end if;
+
+  if p_annonce is not null then
+    select titre into v_sujet from annonces where id = p_annonce;
+  end if;
+
+  insert into conversations (annonce_id, membre_min, membre_max, sujet)
+    values (p_annonce, v_min, v_max, v_sujet)
+    returning id into v_conv;
+  return v_conv;
+end $$ language plpgsql security definer set search_path = public;
+
+/** Fils de discussion du membre, avec le correspondant et le dernier mot. */
+create or replace function mes_conversations()
+returns table (
+  id uuid, annonce_id uuid, sujet text, dernier_le timestamptz,
+  autre_id uuid, autre_prenom text, autre_avatar text,
+  dernier_texte text, dernier_auteur uuid, non_lus int
+) as $$
+  select c.id, c.annonce_id, c.sujet, c.dernier_le,
+         a.id, coalesce(a.raison_sociale, a.prenom), a.avatar_url,
+         d.texte, d.auteur_id,
+         (select count(*)::int from messages_prives m
+           where m.conversation_id = c.id and m.auteur_id <> auth.uid() and m.lu_le is null)
+    from conversations c
+    join profils a on a.id = case when c.membre_min = auth.uid() then c.membre_max else c.membre_min end
+    left join lateral (
+      select texte, auteur_id from messages_prives m
+       where m.conversation_id = c.id order by m.created_at desc limit 1
+    ) d on true
+   where auth.uid() in (c.membre_min, c.membre_max)
+   order by c.dernier_le desc;
+$$ language sql stable security definer set search_path = public;
+
+/** Nombre de messages non lus, pour la pastille de navigation. */
+create or replace function messages_non_lus()
+returns int as $$
+  select count(*)::int from messages_prives m
+    join conversations c on c.id = m.conversation_id
+   where auth.uid() in (c.membre_min, c.membre_max)
+     and m.auteur_id <> auth.uid() and m.lu_le is null;
+$$ language sql stable security definer set search_path = public;
+
+/** Marque comme lus les messages reçus d'une conversation. */
+create or replace function marquer_lus(p_conversation uuid)
+returns void as $$
+  update messages_prives m set lu_le = now()
+    from conversations c
+   where c.id = m.conversation_id
+     and m.conversation_id = p_conversation
+     and auth.uid() in (c.membre_min, c.membre_max)
+     and m.auteur_id <> auth.uid()
+     and m.lu_le is null;
+$$ language sql security definer set search_path = public;
+
+-- Le fil remonte en tête de liste à chaque message.
+create or replace function toucher_conversation() returns trigger as $$
+begin
+  update public.conversations set dernier_le = now() where id = new.conversation_id;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_toucher_conv on messages_prives;
+create trigger trg_toucher_conv after insert on messages_prives
+  for each row execute function toucher_conversation();

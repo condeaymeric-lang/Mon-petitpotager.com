@@ -1,19 +1,23 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { usePanier } from '@/components/PanierContext';
+import { creerClient } from '@/lib/supabase-client';
 import { Marque } from './Marque';
 
 const ONGLETS = {
   acheter: [
     { href: '/', cle: 'accueil', label: 'Accueil', d: 'M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z' },
     { href: '/commandes', cle: 'commandes', label: 'Commandes', d: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0' },
+    { href: '/messages', cle: 'messages', label: 'Messages', d: 'M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4.2-1L3 20l1.1-4.1A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z' },
     { href: '/panier', cle: 'panier', label: 'Panier', d: 'M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6' },
     { href: '/profil', cle: 'profil', label: 'Profil', d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8' },
   ],
   vendre: [
     { href: '/vendre', cle: 'vendre', label: 'Tableau', d: 'M3 3v18h18M7 15l4-5 3 3 5-7' },
     { href: '/vendre/commandes', cle: 'cmd-vendeur', label: 'Commandes', d: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0' },
+    { href: '/messages', cle: 'messages', label: 'Messages', d: 'M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4.2-1L3 20l1.1-4.1A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z' },
     { href: '/vendre/annonces', cle: 'annonces', label: 'Annonces', d: 'M4 4h16v16H4zM4 9h16M9 9v11' },
     { href: '/vendre/ventes', cle: 'ventes', label: 'Ventes', d: 'M18.5 6.5a7 7 0 1 0 0 11M4 10.5h11M4 14h9.5' },
     { href: '/vendre/gestion', cle: 'gestion', label: 'Gestion', d: 'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4M9 3v4h6V3M8 12h8M8 16h5' },
@@ -21,10 +25,33 @@ const ONGLETS = {
   ],
 };
 
+// La barre du bas ne peut pas tout porter : quatre entrées plus le
+// bouton central, au-delà les cibles deviennent trop petites.
+const MOBILE = {
+  acheter: ['accueil', 'messages', 'panier', 'profil'],
+  vendre: ['vendre', 'cmd-vendeur', 'messages', 'profil'],
+};
+
 const PRODUCTEURS = {
   href: '/producteurs', cle: 'producteurs', label: 'Producteurs',
   d: 'M3 21h18M5 21V9l7-4 7 4v12M10 21v-5h4v5',
 };
+
+/** Nombre de messages non lus, relu à chaque changement de page. */
+function useNonLus() {
+  const [n, setN] = useState(0);
+  const path = usePathname();
+
+  useEffect(() => {
+    let vivant = true;
+    creerClient().rpc('messages_non_lus').then(({ data }) => {
+      if (vivant) setN(typeof data === 'number' ? data : 0);
+    });
+    return () => { vivant = false; };
+  }, [path]);
+
+  return n;
+}
 
 function Icone({ d, taille = 21 }: { d: string; taille?: number }) {
   return (
@@ -38,6 +65,7 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
   const path = usePathname();
   const router = useRouter();
   const { nbArticles } = usePanier();
+  const nonLus = useNonLus();
   const modeVendre = path.startsWith('/vendre');
   const onglets = modeVendre ? ONGLETS.vendre : ONGLETS.acheter;
   const publier = modeVendre ? '/vendre/publier' : '/vendre';
@@ -57,6 +85,7 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
                   <Icone d={o.d} taille={17} />
                   {o.label}
                   {o.cle === 'panier' && nbArticles > 0 && <span className="dsk-badge">{nbArticles}</span>}
+                  {o.cle === 'messages' && nonLus > 0 && <span className="dsk-badge">{nonLus}</span>}
                 </Link>
               );
             })}
@@ -87,8 +116,11 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
 export function BarreBas() {
   const path = usePathname();
   const { nbArticles } = usePanier();
+  const nonLus = useNonLus();
   const modeVendre = path.startsWith('/vendre');
-  const onglets = modeVendre ? ONGLETS.vendre : ONGLETS.acheter;
+  const cles = modeVendre ? MOBILE.vendre : MOBILE.acheter;
+  const onglets = (modeVendre ? ONGLETS.vendre : ONGLETS.acheter)
+    .filter((o) => cles.includes(o.cle));
   const fab = modeVendre ? '/vendre/publier' : '/pourquoi';
   const moitie = Math.ceil(onglets.length / 2);
 
@@ -102,6 +134,7 @@ export function BarreBas() {
         </svg>
         {o.label}
         {o.cle === 'panier' && nbArticles > 0 && <span className="dotbadge">{nbArticles}</span>}
+        {o.cle === 'messages' && nonLus > 0 && <span className="dotbadge">{nonLus}</span>}
       </Link>
     );
   };
