@@ -599,3 +599,36 @@ returns table (
   order by e.debut asc
   limit p_limite;
 $$ language sql stable;
+
+-- ═══════════════════════════════════════════════════════════════
+--  PRODUCTEURS PROFESSIONNELS
+--  Annuaire des vendeurs professionnels du secteur. Soumis au rayon,
+--  comme les annonces et les événements.
+-- ═══════════════════════════════════════════════════════════════
+drop function if exists producteurs_autour(double precision, double precision, int, int);
+create or replace function producteurs_autour(
+  p_lat double precision,
+  p_lon double precision,
+  p_rayon_km int default 20,
+  p_limite int default 60
+)
+returns table (
+  id uuid, prenom text, raison_sociale text, bio text, avatar_url text,
+  pro_verifie boolean, est_relais boolean, commune text,
+  distance_km numeric, nb_annonces bigint
+) as $$
+  select
+    pr.id, pr.prenom, pr.raison_sociale, pr.bio, pr.avatar_url,
+    pr.pro_verifie, pr.est_relais, s.nom,
+    round((st_distance(s.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+    (select count(*) from annonces a
+       where a.vendeur_id = pr.id and a.statut = 'en_ligne' and a.quantite > 0)
+  from profils pr
+  join secteurs s on s.code_insee = pr.secteur
+  where pr.role = 'pro'
+    and st_dwithin(s.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+  order by (select count(*) from annonces a
+              where a.vendeur_id = pr.id and a.statut = 'en_ligne' and a.quantite > 0) desc,
+           pr.prenom asc
+  limit p_limite;
+$$ language sql stable;

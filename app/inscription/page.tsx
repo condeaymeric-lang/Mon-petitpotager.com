@@ -315,6 +315,14 @@ export default function Inscription() {
       {etape === 2 && (<>
         <h1>Créer mon compte</h1>
         <p className="lede">Dernière étape.</p>
+        <div className="avert">
+          <b>Les inscriptions ne sont pas ouvertes</b>
+          <p>
+            Le site est en construction. Le compte que vous créez est un compte de test :
+            aucune commande n&apos;est réellement traitée et les données peuvent être
+            effacées sans préavis.
+          </p>
+        </div>
         {dots}
         <form onSubmit={creerCompte}>
           <div className="field" style={{ display: 'flex', justifyContent: 'center' }}>

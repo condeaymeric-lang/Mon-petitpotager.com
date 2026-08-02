@@ -6,15 +6,6 @@ export const metadata = { title: 'CGU et CGV — monpetitpotager.com' };
 export default function Cgu() {
   return (
     <PageLegale titre="Conditions générales" maj="2 août 2026">
-      <div className="legal-todo">
-        <b>Document à faire valider</b>
-        <p>
-          Ces conditions décrivent le fonctionnement réel du service à ce jour. Elles
-          doivent être relues par un avocat, et l&apos;identité de l&apos;éditeur
-          complétée, avant l&apos;ouverture au public.
-        </p>
-      </div>
-
       <h2>1. Objet</h2>
       <p>
         monpetitpotager.com est un service de mise en relation entre habitants

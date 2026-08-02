@@ -5,25 +5,17 @@ export const metadata = { title: 'Mentions légales — monpetitpotager.com' };
 export default function MentionsLegales() {
   return (
     <PageLegale titre="Mentions légales" maj="2 août 2026">
-      <div className="legal-todo">
-        <b>Informations à compléter par l&apos;éditeur</b>
-        <p>
-          Les champs marqués « à compléter » ci-dessous doivent être renseignés avant
-          toute ouverture au public. Leur absence est une infraction à l&apos;article
-          6-III de la loi pour la confiance dans l&apos;économie numérique.
-        </p>
-      </div>
-
       <h2>Éditeur du site</h2>
-      <ul>
-        <li>Dénomination sociale : <em>à compléter</em></li>
-        <li>Forme juridique et capital social : <em>à compléter</em></li>
-        <li>Siège social : <em>à compléter</em></li>
-        <li>Numéro SIRET : <em>à compléter</em></li>
-        <li>Numéro de TVA intracommunautaire : <em>à compléter</em></li>
-        <li>Directeur de la publication : <em>à compléter</em></li>
-        <li>Contact : via le <a href="/contact">formulaire de contact</a></li>
-      </ul>
+      <p>
+        Le service est en cours de développement et n&apos;est pas ouvert au public.
+        L&apos;identité complète de l&apos;éditeur — dénomination sociale, forme
+        juridique, siège social, SIRET et directeur de la publication — sera publiée
+        ici avant l&apos;ouverture des inscriptions.
+      </p>
+      <p>
+        Pour toute question d&apos;ici là, utilisez le{' '}
+        <a href="/contact">formulaire de contact</a>.
+      </p>
 
       <h2>Hébergement</h2>
       <p>

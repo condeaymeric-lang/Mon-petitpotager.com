@@ -1,6 +1,6 @@
 import { creerClientServeur } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
-import type { Profil, Secteur, AnnonceProche, EvenementProche } from '@/lib/types';
+import type { Profil, Secteur, AnnonceProche, EvenementProche, ProducteurProche } from '@/lib/types';
 
 /** Profil + secteur de l'utilisateur connecté. Redirige si non connecté. */
 export async function profilCourant() {
@@ -55,6 +55,19 @@ export async function evenementsAutour(lat: number, lon: number, rayonKm: number
     return [] as EvenementProche[];
   }
   return (data ?? []) as EvenementProche[];
+}
+
+/** Producteurs professionnels du rayon. */
+export async function producteursAutour(lat: number, lon: number, rayonKm: number) {
+  const sb = creerClientServeur();
+  const { data, error } = await sb.rpc('producteurs_autour', {
+    p_lat: lat, p_lon: lon, p_rayon_km: rayonKm, p_limite: 60,
+  });
+  if (error) {
+    console.error('producteurs_autour:', error.message);
+    return [] as ProducteurProche[];
+  }
+  return (data ?? []) as ProducteurProche[];
 }
 
 export async function catalogue() {

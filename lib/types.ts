@@ -21,6 +21,7 @@ export interface Profil {
   nom: string | null;
   telephone: string | null;
   bio: string | null;
+  raison_sociale: string | null;
   role: Role;
   secteur: string | null;
   rayon_km: number;
@@ -105,4 +106,17 @@ export interface EvenementProche {
   auteur_prenom: string;
   auteur_id: string;
   nb_oui: number;
+}
+
+export interface ProducteurProche {
+  id: string;
+  prenom: string;
+  raison_sociale: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  pro_verifie: boolean;
+  est_relais: boolean;
+  commune: string;
+  distance_km: number;
+  nb_annonces: number;
 }

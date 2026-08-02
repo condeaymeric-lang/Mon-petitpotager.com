@@ -4,13 +4,15 @@ import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
 import { useToast } from '@/components/Toast';
 import { compresserImage } from '@/lib/utils';
-import type { Profil } from '@/lib/types';
+import type { Profil, Role } from '@/lib/types';
 
 export default function ModifierProfil({ profil }: { profil: Profil }) {
   const [ouvert, setOuvert] = useState(false);
   const [prenom, setPrenom] = useState(profil.prenom);
   const [telephone, setTelephone] = useState(profil.telephone ?? '');
   const [bio, setBio] = useState(profil.bio ?? '');
+  const [raisonSociale, setRaisonSociale] = useState(profil.raison_sociale ?? '');
+  const [role, setRole] = useState<Role>(profil.role);
   const [avatar, setAvatar] = useState<string | null>(profil.avatar_url ?? null);
   const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -46,6 +48,8 @@ export default function ModifierProfil({ profil }: { profil: Profil }) {
       prenom: prenom.trim() || profil.prenom,
       telephone: telephone.trim() || null,
       bio: bio.trim() || null,
+      role,
+      ...(role === 'pro' ? { raison_sociale: raisonSociale.trim() || null } : {}),
       avatar_url,
     }).eq('id', profil.id);
 
@@ -83,6 +87,24 @@ export default function ModifierProfil({ profil }: { profil: Profil }) {
       </div>
 
       <div className="field">
+        <label id="role-label">Je suis</label>
+        <div className="seg" role="group" aria-labelledby="role-label" style={{ flexDirection: 'column' }}>
+          {([['acheteur', 'Acheteur'],
+             ['amateur', 'Jardinier amateur'],
+             ['pro', 'Producteur professionnel']] as [Role, string][]).map(([v, l]) => (
+            <button key={v} type="button" className={role === v ? 'on' : ''}
+              style={{ textAlign: 'left' }} onClick={() => setRole(v)}>{l}</button>
+          ))}
+        </div>
+        {role === 'pro' && profil.role !== 'pro' && (
+          <p className="help">
+            En tant que professionnel, vous apparaîtrez dans l&apos;annuaire des
+            producteurs du secteur, avec la présentation de votre ferme.
+          </p>
+        )}
+      </div>
+
+      <div className="field">
         <label htmlFor="pr">Prénom</label>
         <input className="inp" id="pr" value={prenom} onChange={(e) => setPrenom(e.target.value)} />
       </div>
@@ -91,10 +113,27 @@ export default function ModifierProfil({ profil }: { profil: Profil }) {
         <input className="inp" id="tel" type="tel" value={telephone} onChange={(e) => setTelephone(e.target.value)}
           placeholder="Optionnel" />
       </div>
+      {role === 'pro' && (
+        <div className="field">
+          <label htmlFor="rs">Nom de la ferme ou de l&apos;exploitation</label>
+          <input className="inp" id="rs" maxLength={120} value={raisonSociale}
+            onChange={(e) => setRaisonSociale(e.target.value)}
+            placeholder="Ferme du Bugnon" />
+          <p className="help">Affiché en tête de votre fiche producteur.</p>
+        </div>
+      )}
+
       <div className="field">
-        <label htmlFor="bio">À propos</label>
-        <textarea className="inp" id="bio" maxLength={200} value={bio}
-          onChange={(e) => setBio(e.target.value)} placeholder="Votre jardin, vos produits favoris…" />
+        <label htmlFor="bio">{role === 'pro' ? 'Présentation de la ferme' : 'À propos'}</label>
+        <textarea className="inp" id="bio" maxLength={role === 'pro' ? 600 : 200} value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          style={role === 'pro' ? { minHeight: 130 } : undefined}
+          placeholder={role === 'pro'
+            ? 'Votre exploitation, vos méthodes de culture, votre histoire…'
+            : 'Votre jardin, vos produits favoris…'} />
+          {role === 'pro' && (
+            <p className="help">Visible par les habitants du secteur sur votre fiche.</p>
+          )}
       </div>
 
       <div className="row-btn">

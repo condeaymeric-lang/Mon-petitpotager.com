@@ -19,6 +19,11 @@ const ONGLETS = {
   ],
 };
 
+const PRODUCTEURS = {
+  href: '/producteurs', cle: 'producteurs', label: 'Producteurs',
+  d: 'M3 21h18M5 21V9l7-4 7 4v12M10 21v-5h4v5',
+};
+
 function Icone({ d, taille = 21 }: { d: string; taille?: number }) {
   return (
     <svg width={taille} height={taille} viewBox="0 0 24 24">
@@ -42,7 +47,8 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
           <div className="brand"><Logo size={25} />mon<i>petit</i>potager</div>
 
           <nav className="dsk-nav" aria-label="Navigation principale">
-            {onglets.filter((o) => o.cle !== 'profil').map((o) => {
+            {[...onglets.filter((o) => o.cle !== 'profil'),
+              ...(modeVendre ? [] : [PRODUCTEURS])].map((o) => {
               const actif = o.href === '/' ? path === '/' : path.startsWith(o.href);
               return (
                 <Link key={o.cle} href={o.href} className={actif ? 'on' : ''}>

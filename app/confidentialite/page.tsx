@@ -5,18 +5,11 @@ export const metadata = { title: 'Données personnelles — monpetitpotager.com'
 export default function Confidentialite() {
   return (
     <PageLegale titre="Données personnelles" maj="2 août 2026">
-      <div className="legal-todo">
-        <b>Document à faire valider</b>
-        <p>
-          Cette page décrit fidèlement les traitements réellement effectués par le
-          service à ce jour. L&apos;identité du responsable de traitement reste à
-          compléter, et l&apos;ensemble doit être relu par un juriste avant
-          l&apos;ouverture au public.
-        </p>
-      </div>
-
       <h2>Responsable de traitement</h2>
-      <p><em>À compléter</em> — voir les <a href="/mentions-legales">mentions légales</a>.</p>
+      <p>
+        Les coordonnées du responsable de traitement figureront dans les{' '}
+        <a href="/mentions-legales">mentions légales</a> à l&apos;ouverture du service.
+      </p>
 
       <h2>Données collectées</h2>
       <p>Le service ne collecte que ce dont il a besoin pour fonctionner :</p>

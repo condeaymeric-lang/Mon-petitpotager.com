@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { profilCourant, annoncesAutour, catalogue, evenementsAutour } from '@/lib/donnees';
+import { profilCourant, annoncesAutour, catalogue, evenementsAutour, producteursAutour } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import CarteAnnonce from '@/components/CarteAnnonce';
 import CarteEvenement from '@/components/CarteEvenement';
@@ -42,11 +42,12 @@ export default async function Accueil({
     );
   }
 
-  const [annonces, { produits }, evenements, meteo] = await Promise.all([
+  const [annonces, { produits }, evenements, meteo, producteurs] = await Promise.all([
     annoncesAutour(secteur.lat, secteur.lon, profil.rayon_km, searchParams.cat),
     catalogue(),
     evenementsAutour(secteur.lat, secteur.lon, profil.rayon_km, 3),
     meteoSecteur(secteur.lat, secteur.lon, secteur.nom),
+    producteursAutour(secteur.lat, secteur.lon, profil.rayon_km),
   ]);
 
   const categories = [...new Set(produits.map((p) => p.categorie))];
@@ -91,6 +92,37 @@ export default async function Accueil({
           )}
 
           {meteo && <BlocMeteo meteo={meteo} />}
+
+          {producteurs.length > 0 && (
+            <section className="bloc" aria-labelledby="titre-producteurs">
+              <div className="bloc-head">
+                <h2 id="titre-producteurs">Producteurs du secteur</h2>
+                <Link href="/producteurs" className="bloc-lien">Tout voir</Link>
+              </div>
+              <div className="prods">
+                {producteurs.slice(0, 3).map((p) => (
+                  <Link key={p.id} href={`/producteurs/${p.id}`} className="prod">
+                    {p.avatar_url
+                      ? <img src={p.avatar_url} alt="" className="prod-photo" loading="lazy" />
+                      : <span className="prod-photo prod-photo-vide">{p.prenom?.[0]?.toUpperCase()}</span>}
+                    <div className="prod-b">
+                      <h4>{p.raison_sociale || p.prenom}</h4>
+                      <div className="item-meta">
+                        <span>{p.commune}</span>
+                        <span>{p.distance_km} km</span>
+                        <span>
+                          {p.nb_annonces > 0
+                            ? `${p.nb_annonces} produit${p.nb_annonces > 1 ? 's' : ''}`
+                            : 'Aucun produit en ligne'}
+                        </span>
+                      </div>
+                    </div>
+                    {p.pro_verifie && <div className="prod-badges"><span className="badge b-pro">Vérifié</span></div>}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="bloc" aria-labelledby="titre-evenements">
             <div className="bloc-head">
