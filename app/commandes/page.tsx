@@ -50,7 +50,7 @@ export default async function Commandes() {
                 <div className="photos" style={{ marginTop: 12 }}>
                   {(c.lignes ?? []).slice(0, 4).map((l: any) => (
                     <div className="photo" key={l.id} style={{ width: 44, height: 44 }}>
-                      {l.photo ? <img src={l.photo} alt="" /> : <Illustration />}
+                      {l.photo ? <img src={l.photo} alt="" loading="lazy" /> : <Illustration />}
                     </div>
                   ))}
                 </div>

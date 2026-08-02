@@ -192,7 +192,7 @@ export default function Formulaire({
         <div className="photos">
           {photos.map((p, i) => (
             <div className="photo" key={p}>
-              <img src={p} alt="" />
+              <img src={p} alt="" loading="lazy" />
               <button onClick={() => setPhotos((x) => x.filter((_, j) => j !== i))} aria-label="Retirer">×</button>
             </div>
           ))}

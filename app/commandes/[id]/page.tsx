@@ -40,7 +40,7 @@ export default async function PageCommande({ params }: { params: { id: string } 
           <h3>Détail</h3>
           {(c.lignes ?? []).map((l: any) => (
             <div className="line" key={l.id}>
-              <div className="th">{l.photo ? <img src={l.photo} alt="" /> : <Illustration />}</div>
+              <div className="th">{l.photo ? <img src={l.photo} alt="" loading="lazy" /> : <Illustration />}</div>
               <div className="line-b">
                 <h4>{l.titre}</h4>
                 <p>{l.variete ? `${l.variete} · ` : ''}×{l.quantite}</p>

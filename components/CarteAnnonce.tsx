@@ -31,7 +31,7 @@ export default function CarteAnnonce({
         </p>
         <p className="vendeur">
           {a.vendeur_avatar
-            ? <img src={a.vendeur_avatar} alt="" className="avatar-mini" />
+            ? <img src={a.vendeur_avatar} alt="" className="avatar-mini" loading="lazy" />
             : <span className="avatar-mini avatar-mini-vide">{a.vendeur_prenom?.[0]?.toUpperCase()}</span>}
           {a.vendeur_prenom}
         </p>

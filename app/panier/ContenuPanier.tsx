@@ -156,7 +156,7 @@ export default function ContenuPanier({
           {items.map((l) => (
             <div className="line" key={l.annonce_id}>
               <div className="th">
-                {l.photo ? <img src={l.photo} alt="" /> : <Illustration />}
+                {l.photo ? <img src={l.photo} alt="" loading="lazy" /> : <Illustration />}
               </div>
               <div className="line-b">
                 <h4>{l.titre}</h4>

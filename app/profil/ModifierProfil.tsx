@@ -76,7 +76,7 @@ export default function ModifierProfil({ profil }: { profil: Profil }) {
             background: 'var(--paper)',
           }}>
           {avatar
-            ? <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={avatar} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <span className="tiny" style={{ textAlign: 'center', padding: 6 }}>Ajouter une photo</span>}
         </button>
         <input ref={fichier} type="file" accept="image/*" hidden onChange={choisirAvatar} />

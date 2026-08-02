@@ -30,7 +30,7 @@ export default async function MesAnnonces() {
               <div className="card" key={a.id}>
                 <div className="line" style={{ border: 0, padding: 0 }}>
                   <div className="th">
-                    {a.photos?.[0] ? <img src={a.photos[0]} alt="" /> : <Illustration nom={a.variete?.illustration ?? a.produit?.illustration} />}
+                    {a.photos?.[0] ? <img src={a.photos[0]} alt="" loading="lazy" /> : <Illustration nom={a.variete?.illustration ?? a.produit?.illustration} />}
                   </div>
                   <div className="line-b">
                     <h4>{a.titre}{a.variete ? ` — ${a.variete.nom}` : ''}</h4>

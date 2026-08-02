@@ -26,7 +26,7 @@ export default async function Profil() {
       <div className="app has-tabbar"><div className="page">
         <div className="page-head" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           {profil.avatar_url ? (
-            <img src={profil.avatar_url} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            <img src={profil.avatar_url} alt="" loading="lazy" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
           ) : (
             <div style={{
               width: 56, height: 56, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center',

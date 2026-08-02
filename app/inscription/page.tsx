@@ -325,7 +325,7 @@ export default function Inscription() {
                 background: 'var(--paper)', flexDirection: 'column', gap: 4,
               }}>
               {avatar ? (
-                <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={avatar} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <span className="tiny" style={{ textAlign: 'center', padding: 6 }}>
                   {avatarEnvoi ? '…' : 'Ajouter une photo'}

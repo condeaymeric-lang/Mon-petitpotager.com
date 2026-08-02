@@ -45,7 +45,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
             {a.photos?.length > 1 && (
               <div className="photos" style={{ marginTop: 10 }}>
                 {a.photos.slice(1).map((p: string) => (
-                  <div className="photo" key={p}><img src={p} alt="" /></div>
+                  <div className="photo" key={p}><img src={p} alt="" loading="lazy" /></div>
                 ))}
               </div>
             )}
