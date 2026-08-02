@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Logo } from '@/components/Illustrations';
 import PiedDePage from '@/components/PiedDePage';
 import FormulaireContact from './FormulaireContact';
@@ -8,9 +9,9 @@ export default function Contact() {
   return (
     <>
       <div className="app"><div className="page page-form">
-        <div className="brand" style={{ fontSize: '1.7rem', marginBottom: 18 }}>
+        <Link href="/" className="brand" style={{ fontSize: '1.7rem', marginBottom: 18 }}>
           <Logo size={29} />mon<i>petit</i>potager
-        </div>
+        </Link>
         <div className="page-head">
           <h1>Nous écrire</h1>
           <p>

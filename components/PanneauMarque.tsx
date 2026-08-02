@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Logo } from './Illustrations';
 
 /** Panneau de marque affiché à côté des formulaires de connexion/inscription
@@ -6,9 +7,9 @@ export function PanneauMarque() {
   return (
     <div className="onb-marque">
       <div className="onb-marque-in">
-        <div className="brand" style={{ fontSize: '2.1rem' }}>
+        <Link href="/" className="brand" style={{ fontSize: '2.1rem' }}>
           <Logo size={32} />mon<i>petit</i>potager
-        </div>
+        </Link>
         <p className="onb-tagline">Cultivons le bon. Partageons le meilleur.</p>
         <ul className="onb-promesses">
           <li>Vous ne voyez jamais d'annonce au-delà de votre rayon.</li>

@@ -11,9 +11,9 @@ export default function Erreur({ error, reset }: { error: Error & { digest?: str
   return (
     <div className="onb">
       <div className="onb-in">
-        <div className="brand" style={{ fontSize: '1.7rem' }}>
+        <Link href="/" className="brand" style={{ fontSize: '1.7rem' }}>
           <Logo size={29} />mon<i>petit</i>potager
-        </div>
+        </Link>
         <div className="empty" style={{ marginTop: 24 }}>
           <Illustration nom="plant" className="e-ico" />
           <h3>La page n'a pas pu s'afficher.</h3>

@@ -45,7 +45,7 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
     <div className="topbar">
       <div className="topbar-in">
         <div className="tb-row">
-          <div className="brand"><Logo size={25} />mon<i>petit</i>potager</div>
+          <Link href="/" className="brand"><Logo size={25} />mon<i>petit</i>potager</Link>
 
           <nav className="dsk-nav" aria-label="Navigation principale">
             {[...onglets.filter((o) => o.cle !== 'profil'),

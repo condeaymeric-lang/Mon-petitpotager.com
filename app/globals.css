@@ -64,6 +64,8 @@ img,svg{display:block;max-width:100%}
 .tb-row{display:flex;align-items:center;gap:10px}
 .brand{display:flex;align-items:center;gap:6px;font-family:'Caveat';font-weight:700;font-size:1.5rem;color:var(--forest);letter-spacing:0;line-height:1}
 .brand i{font-style:normal;color:var(--forest-2)}
+a.brand{transition:opacity .15s}
+a.brand:hover{opacity:.72}
 .loc{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 11px;max-width:54%;flex-shrink:0}
 .loc b{color:var(--forest);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mode-sw{display:flex;gap:3px;background:#E9E6D9;border-radius:999px;padding:3px;margin-top:9px}
