@@ -436,3 +436,108 @@ create policy envoi_photos on storage.objects for insert
 drop policy if exists suppr_photos on storage.objects;
 create policy suppr_photos on storage.objects for delete
   using (bucket_id = 'photos' and owner = auth.uid());
+
+-- ═══════════════════════════════════════════════════════════════
+--  ÉVÉNEMENTS LOCAUX
+--  Fêtes de village, marchés, brocantes… proposés par les membres.
+--  Soumis au même rayon que les annonces : on ne voit que son secteur.
+-- ═══════════════════════════════════════════════════════════════
+do $$ begin
+  create type type_evenement as enum ('marche','fete','brocante','porte_ouverte','autre');
+exception when duplicate_object then null; end $$;
+
+create table if not exists evenements (
+  id            uuid primary key default uuid_generate_v4(),
+  auteur_id     uuid references profils(id) on delete cascade not null,
+  secteur       text references secteurs(code_insee) not null,
+  titre         text not null,
+  description   text,
+  type          type_evenement default 'autre' not null,
+  debut         timestamptz not null,
+  fin           timestamptz,
+  lieu          text,
+  commune       text not null,
+  lat           double precision,
+  lon           double precision,
+  geo           geography(point, 4326),
+  photos        text[] default '{}',
+  annule        boolean default false not null,
+  created_at    timestamptz default now()
+);
+create index if not exists idx_evenements_geo   on evenements using gist (geo);
+create index if not exists idx_evenements_debut on evenements (debut);
+create index if not exists idx_evenements_auteur on evenements (auteur_id);
+
+create or replace function set_evenement_geo() returns trigger as $$
+begin
+  if new.lat is not null and new.lon is not null then
+    new.geo := st_point(new.lon, new.lat)::geography;
+  end if;
+  return new;
+end $$ language plpgsql;
+
+drop trigger if exists trg_evenement_geo on evenements;
+create trigger trg_evenement_geo before insert or update on evenements
+  for each row execute function set_evenement_geo();
+
+-- Événements à venir dans le rayon, même logique que annonces_autour.
+drop function if exists evenements_autour(double precision, double precision, int, int);
+create or replace function evenements_autour(
+  p_lat double precision,
+  p_lon double precision,
+  p_rayon_km int default 20,
+  p_limite int default 20
+)
+returns table (
+  id uuid, titre text, description text, type type_evenement,
+  debut timestamptz, fin timestamptz, lieu text, commune text,
+  photos text[], distance_km numeric, auteur_prenom text, auteur_id uuid
+) as $$
+  select
+    e.id, e.titre, e.description, e.type,
+    e.debut, e.fin, e.lieu, e.commune,
+    e.photos,
+    round((st_distance(e.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+    pr.prenom, pr.id
+  from evenements e
+  join profils pr on pr.id = e.auteur_id
+  where e.annule = false
+    and e.debut > now() - interval '12 hours'
+    and st_dwithin(e.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+  order by e.debut asc
+  limit p_limite;
+$$ language sql stable;
+
+-- ═══════════════════════════════════════════════════════════════
+--  MESSAGES DE CONTACT
+-- ═══════════════════════════════════════════════════════════════
+create table if not exists messages_contact (
+  id          uuid primary key default uuid_generate_v4(),
+  profil_id   uuid references profils(id) on delete set null,
+  email       text not null,
+  sujet       text not null,
+  message     text not null,
+  traite      boolean default false not null,
+  created_at  timestamptz default now()
+);
+create index if not exists idx_messages_date on messages_contact (created_at desc);
+
+alter table evenements       enable row level security;
+alter table messages_contact enable row level security;
+
+-- Événements : lisibles par tous (le filtre de rayon est fait par la
+-- fonction), créés et modifiés par leur auteur uniquement.
+drop policy if exists lecture_evenements on evenements;
+create policy lecture_evenements on evenements for select using (true);
+drop policy if exists creation_evenement on evenements;
+create policy creation_evenement on evenements for insert with check (auteur_id = auth.uid());
+drop policy if exists maj_evenement on evenements;
+create policy maj_evenement on evenements for update using (auteur_id = auth.uid());
+drop policy if exists suppr_evenement on evenements;
+create policy suppr_evenement on evenements for delete using (auteur_id = auth.uid());
+
+-- Contact : chacun peut écrire, chacun ne relit que ses propres envois.
+drop policy if exists ecriture_contact on messages_contact;
+create policy ecriture_contact on messages_contact for insert with check (true);
+drop policy if exists lecture_contact on messages_contact;
+create policy lecture_contact on messages_contact for select using (profil_id = auth.uid());

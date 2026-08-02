@@ -88,3 +88,20 @@ export interface LignePanier {
   commune: string;
   prix_ref: number | null;
 }
+
+export type TypeEvenement = 'marche' | 'fete' | 'brocante' | 'porte_ouverte' | 'autre';
+
+export interface EvenementProche {
+  id: string;
+  titre: string;
+  description: string | null;
+  type: TypeEvenement;
+  debut: string;
+  fin: string | null;
+  lieu: string | null;
+  commune: string;
+  photos: string[];
+  distance_km: number;
+  auteur_prenom: string;
+  auteur_id: string;
+}

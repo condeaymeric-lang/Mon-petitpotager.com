@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { profilCourant, annoncesAutour, catalogue } from '@/lib/donnees';
+import { profilCourant, annoncesAutour, catalogue, evenementsAutour } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import CarteAnnonce from '@/components/CarteAnnonce';
+import CarteEvenement from '@/components/CarteEvenement';
+import PiedDePage from '@/components/PiedDePage';
 import { Illustration } from '@/components/Illustrations';
 import { estDeSaison, SEUIL_OUVERTURE } from '@/lib/utils';
 import ListeAttente from './ListeAttente';
@@ -38,9 +40,10 @@ export default async function Accueil({
     );
   }
 
-  const [annonces, { produits }] = await Promise.all([
+  const [annonces, { produits }, evenements] = await Promise.all([
     annoncesAutour(secteur.lat, secteur.lon, profil.rayon_km, searchParams.cat),
     catalogue(),
+    evenementsAutour(secteur.lat, secteur.lon, profil.rayon_km, 3),
   ]);
 
   const categories = [...new Set(produits.map((p) => p.categorie))];
@@ -83,8 +86,34 @@ export default async function Accueil({
               <Link className="btn btn-p" href="/vendre/publier">Publier une annonce</Link>
             </div>
           )}
+
+          <section className="bloc" aria-labelledby="titre-evenements">
+            <div className="bloc-head">
+              <h2 id="titre-evenements">Autour de chez vous</h2>
+              <Link href="/evenements" className="bloc-lien">
+                {evenements.length > 0 ? 'Tout voir' : 'Proposer'}
+              </Link>
+            </div>
+            {evenements.length > 0 ? (
+              <div className="events">
+                {evenements.map((e) => <CarteEvenement key={e.id} evenement={e} />)}
+              </div>
+            ) : (
+              <div className="card">
+                <h3>Aucun événement annoncé</h3>
+                <p className="muted" style={{ marginTop: 6 }}>
+                  Marché, fête de village, brocante, porte ouverte : annoncez-le et vos
+                  voisins le verront ici.
+                </p>
+                <Link className="btn btn-s btn-sm" href="/evenements/nouveau" style={{ marginTop: 12 }}>
+                  Proposer un événement
+                </Link>
+              </div>
+            )}
+          </section>
         </div>
       </div>
+      <PiedDePage />
       <BarreBas />
     </>
   );

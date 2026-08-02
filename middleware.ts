@@ -25,7 +25,11 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
 
-  const publiques = ['/connexion', '/inscription', '/pourquoi', '/auth'];
+  // Les conditions doivent être lisibles avant de les accepter à l'inscription.
+  const publiques = [
+    '/connexion', '/inscription', '/pourquoi', '/auth',
+    '/cgu', '/confidentialite', '/mentions-legales', '/contact',
+  ];
   const estPublique = publiques.some((p) => path.startsWith(p));
 
   if (!user && !estPublique) {

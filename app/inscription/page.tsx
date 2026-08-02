@@ -366,6 +366,14 @@ export default function Inscription() {
           </div>
           {erreur && <p className="errmsg" style={{ marginBottom: 12 }}>{erreur}</p>}
           <button className="btn btn-p" disabled={envoi}>{envoi ? 'Création…' : 'Créer mon compte'}</button>
+          <p className="tiny center" style={{ marginTop: 12 }}>
+            En créant votre compte, vous acceptez les{' '}
+            <Link href="/cgu" style={{ color: 'var(--forest-2)', fontWeight: 600 }}>conditions générales</Link>
+            {' '}et la{' '}
+            <Link href="/confidentialite" style={{ color: 'var(--forest-2)', fontWeight: 600 }}>
+              politique de données personnelles
+            </Link>.
+          </p>
           <button type="button" className="btn btn-s" style={{ marginTop: 10 }} onClick={() => setEtape(1)}>Retour</button>
         </form>
       </>)}
