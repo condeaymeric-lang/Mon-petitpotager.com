@@ -608,46 +608,54 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 @media(min-width:560px){.pub-banniere{flex-direction:row;gap:16px;text-align:left}
   .pub-banniere p{flex:1}}
 .rail{display:none}
-/* Les colonnes latérales sont volontairement étroites et détachées du
-   contenu : elles accompagnent la page, elles ne la serrent pas. */
-@media(min-width:1360px){
-  .rail{display:block;position:fixed;top:132px;width:146px;z-index:5;
-    max-height:calc(100vh - 168px);overflow-y:auto;scrollbar-width:thin}
-  .rail-g{left:max(16px,calc(50vw - 700px))}
-  .rail-d{right:max(16px,calc(50vw - 700px))}
-  .rail .pub{min-height:340px}
+/* Colonnes latérales : étroites, écartées du contenu, et jamais de
+   barre de défilement — une colonne qui défile est une colonne trop
+   petite pour ce qu'on y met. */
+@media(min-width:1400px){
+  .rail{display:block;position:fixed;top:128px;width:196px;z-index:5}
+  .rail-g{left:max(16px,calc(50vw - 724px))}
+  .rail-d{right:max(16px,calc(50vw - 724px))}
+  .rail .pub{min-height:320px}
   .classement-fil{display:none}
 }
-@media(min-width:1600px){
-  .rail{width:170px}
-  .rail-g{left:calc(50vw - 760px)}
-  .rail-d{right:calc(50vw - 760px)}
+@media(min-width:1680px){
+  .rail{width:216px}
+  .rail-g{left:calc(50vw - 780px)}
+  .rail-d{right:calc(50vw - 780px)}
 }
 
 /* ── Classement des voisins ── */
 .classement{background:var(--paper);border:1.5px solid var(--line);
-  border-radius:var(--r-m);padding:14px}
-.card.classement{padding:16px}
-.classement h3{font-size:.95rem}
-.clst{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:2px}
-.clst a{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:8px;
-  min-height:44px;transition:background .15s}
+  border-radius:var(--r-m);padding:15px 13px}
+.card.classement{padding:18px}
+.classement h3{font-size:1rem;line-height:1.25}
+.clst{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:3px}
+.clst a{display:grid;grid-template-columns:18px 30px 1fr auto;align-items:center;
+  column-gap:9px;padding:7px 5px;border-radius:9px;min-height:44px;transition:background .15s}
 .clst a:hover{background:var(--cream)}
-.clst-rang{flex-shrink:0;width:19px;font-size:.78rem;font-weight:700;
-  color:var(--ink-soft);text-align:center;font-variant-numeric:tabular-nums}
+.clst-rang{font-size:.85rem;font-weight:700;color:var(--ink-soft);
+  text-align:center;font-variant-numeric:tabular-nums}
 .clst-podium{color:var(--bark)}
-.clst-photo{flex-shrink:0;width:28px;height:28px;border-radius:50%;object-fit:cover}
+.clst-photo{width:30px;height:30px;border-radius:50%;object-fit:cover}
 .clst-photo-vide{display:grid;place-items:center;background:var(--leaf-soft);
-  color:var(--forest);font-size:.78rem;font-weight:700}
-.clst-nom{flex:1;min-width:0;display:block}
-.clst-nom b{display:block;font-size:.82rem;color:var(--forest);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.clst-nom span{display:block;font-size:.73rem;color:var(--ink-soft);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.clst-pts{flex-shrink:0;font-size:.8rem;font-weight:700;color:var(--forest-2);
-  font-variant-numeric:tabular-nums}
-.clst-note{margin-top:10px;line-height:1.4}
+  color:var(--forest);font-size:.82rem;font-weight:700}
+/* Les noms passent à la ligne plutôt que d'être coupés : un nom tronqué
+   ne sert à personne. */
+.clst-nom{min-width:0}
+.clst-nom b{display:block;font-size:.87rem;line-height:1.25;color:var(--forest);
+  overflow-wrap:anywhere}
+.clst-nom span{display:block;font-size:.75rem;line-height:1.3;color:var(--ink-soft);
+  margin-top:1px}
+.clst-pts{font-size:.85rem;font-weight:700;color:var(--forest-2);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.clst-pts i{font-style:normal;font-size:.68rem;font-weight:600;
+  color:var(--ink-soft);margin-left:2px}
+.clst-note{margin-top:12px;line-height:1.45}
 .classement-fil{margin-bottom:18px}
+/* Dans le fil, la place ne manque pas : on aère. */
+.classement-fil .clst a{grid-template-columns:22px 38px 1fr auto;column-gap:12px;padding:9px 6px}
+.classement-fil .clst-photo{width:38px;height:38px}
+.classement-fil .clst-nom b{font-size:.94rem}
 
 /* ── Confort de lecture ── */
 .saut-contenu{position:absolute;left:-9999px;top:0;z-index:100;padding:11px 18px;

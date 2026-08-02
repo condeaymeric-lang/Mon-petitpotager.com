@@ -45,11 +45,12 @@ export function Classement({ voisins, compact = false }: { voisins: Voisin[]; co
                 <b>{v.prenom}</b>
                 <span>
                   {v.role === 'pro' ? 'Producteur' : 'Voisin'}
-                  {v.est_relais ? ' · relais' : ''}
-                  {v.nb_annonces > 0 ? ` · ${v.nb_annonces} annonce${v.nb_annonces > 1 ? 's' : ''}` : ''}
+                  {v.est_relais ? ' · point relais' : ''}
+                  {!compact && v.nb_annonces > 0
+                    ? ` · ${v.nb_annonces} annonce${v.nb_annonces > 1 ? 's' : ''}` : ''}
                 </span>
               </span>
-              <span className="clst-pts">{v.points}</span>
+              <span className="clst-pts">{v.points}<i>pts</i></span>
             </Link>
           </li>
         ))}
