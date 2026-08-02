@@ -3,7 +3,6 @@ import { profilCourant, catalogue } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import { Illustration } from '@/components/Illustrations';
 import { eur, estDeSaison, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
-import ListeAttente from '../ListeAttente';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,16 +16,6 @@ interface Stats {
 
 export default async function EspaceVendeur() {
   const { profil, secteur, sb } = await profilCourant();
-
-  if (secteur && !secteur.ouvert) {
-    return (
-      <>
-        <BarreHaut commune={secteur.nom} rayonKm={profil.rayon_km} />
-        <div className="app has-tabbar"><ListeAttente secteur={secteur} profilId={profil.id} /></div>
-        <BarreBas />
-      </>
-    );
-  }
 
   const estPro = profil.role === 'pro';
 

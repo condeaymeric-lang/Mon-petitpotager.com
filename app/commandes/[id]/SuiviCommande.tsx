@@ -39,8 +39,26 @@ export default function SuiviCommande({
       .update({ verse: true, verse_le: new Date().toISOString() })
       .eq('commande_id', commandeId);
 
+    // Prévenir l'acheteur et les vendeurs par courriel. L'échec de
+    // l'envoi ne doit pas remettre en cause le retrait déjà confirmé.
+    let courriels = 0;
+    try {
+      const r = await fetch('/api/retrait-confirme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commandeId }),
+      });
+      if (r.ok) courriels = (await r.json()).envoyes ?? 0;
+    } catch {
+      // Rien à faire ici : le message reste consigné côté serveur.
+    }
+
     setEtat('retiree');
-    toast(gain && gain > 0 ? `Retrait confirmé · +${gain} points` : 'Retrait confirmé');
+    toast([
+      'Retrait confirmé',
+      gain && gain > 0 ? `+${gain} points` : null,
+      courriels > 0 ? `${courriels} courriel${courriels > 1 ? 's' : ''} envoyé${courriels > 1 ? 's' : ''}` : null,
+    ].filter(Boolean).join(' · '));
     router.refresh();
   }
 

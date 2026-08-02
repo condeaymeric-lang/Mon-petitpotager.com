@@ -387,12 +387,24 @@ export default function ContenuPanier({
         )}
       </div>
 
+      <div className="avert" role="note">
+        <b>Commande de test. Aucune somme ne sera facturée ni encaissée.</b>
+        <p>
+          monpetitpotager.com est en construction. Le paiement en ligne n&apos;est pas
+          branché, aucun prélèvement n&apos;est effectué, et aucune transaction
+          conclue ici n&apos;a de valeur commerciale. Les montants affichés servent
+          uniquement à éprouver le fonctionnement du service. Les courriels envoyés
+          à cette occasion portent le même avertissement.
+        </p>
+      </div>
+
       <button className="btn btn-p" onClick={valider} disabled={envoi}>
-        {envoi ? 'Validation…' : `Valider ma commande — ${eur(total)}`}
+        {envoi ? 'Validation…' : `Valider ma commande de test — ${eur(total)}`}
       </button>
       <p className="tiny center" style={{ marginTop: 11 }}>
-        Le vendeur n'est payé qu'après votre confirmation de retrait.
-        Le paiement en ligne (Stripe) n'est pas encore branché : réglez sur place.
+        Le vendeur n&apos;est payé qu&apos;après votre confirmation de retrait.
+        Rien ne transite par le site : le règlement éventuel se fait de la main
+        à la main, entre vous et le vendeur.
       </p>
     </div>
   );

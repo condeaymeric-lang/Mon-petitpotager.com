@@ -1,4 +1,3 @@
-export const SEUIL_OUVERTURE = 200;
 export const RAYON_DEFAUT = 20;
 export const FRAIS_SERVICE = 0.7;
 export const POINTS_PAR_EURO = 1;

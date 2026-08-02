@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { profilCourant } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import { Illustration } from '@/components/Illustrations';
+import { FicheDetails } from '@/components/FicheDetails';
 import { eur, distanceKm } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +13,7 @@ export default async function FicheProducteur({ params }: { params: { id: string
 
   const { data: p } = await sb
     .from('profils')
-    .select('id, prenom, raison_sociale, bio, avatar_url, pro_verifie, est_relais, role, secteur, relais_adresse, relais_horaires')
+    .select('id, prenom, raison_sociale, bio, avatar_url, pro_verifie, est_relais, role, secteur, relais_adresse, relais_horaires, site_web, reseau_social, disponibilites, moyens_paiement, methode_culture, label_qualite, annee_installation, surface_ha, specialites')
     .eq('id', params.id)
     .eq('role', 'pro')
     .maybeSingle();
@@ -69,6 +70,8 @@ export default async function FicheProducteur({ params }: { params: { id: string
               || "Ce producteur n'a pas encore rédigé sa présentation."}
           </p>
         </div>
+
+        <FicheDetails p={p} />
 
         {p.est_relais && p.relais_adresse && (
           <div className="card">

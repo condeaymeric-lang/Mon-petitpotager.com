@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { profilCourant } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
-import { eur, SEUIL_OUVERTURE, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
+import { eur, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
 import PanneauProfil from './PanneauProfil';
 import BonsAchat from './BonsAchat';
 import ModifierProfil from './ModifierProfil';
@@ -23,8 +23,6 @@ export default async function Profil() {
     .select('id, code, montant, utilise, expire_le')
     .eq('profil_id', profil.id)
     .order('created_at', { ascending: false });
-
-  const total = (secteur?.membres ?? 0) + (secteur?.attente ?? 0);
 
   return (
     <>
@@ -59,7 +57,7 @@ export default async function Profil() {
             <div className="stats">
               <div><b>{nbAnnonces ?? 0}</b><span className="tiny">annonces</span></div>
               <div><b>{nbCommandes ?? 0}</b><span className="tiny">commandes</span></div>
-              <div><b>{total}</b><span className="tiny">voisins</span></div>
+              <div><b>{secteur?.membres ?? 0}</b><span className="tiny">voisins</span></div>
             </div>
           </div>
         </div>

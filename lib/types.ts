@@ -20,6 +20,15 @@ export interface Profil {
   prenom: string;
   nom: string | null;
   telephone: string | null;
+  site_web?: string | null;
+  reseau_social?: string | null;
+  disponibilites?: string | null;
+  moyens_paiement?: string[] | null;
+  methode_culture?: string | null;
+  label_qualite?: string | null;
+  annee_installation?: number | null;
+  surface_ha?: number | null;
+  specialites?: string | null;
   bio: string | null;
   raison_sociale: string | null;
   role: Role;

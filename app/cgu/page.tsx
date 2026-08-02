@@ -1,5 +1,5 @@
 import PageLegale from '@/components/PageLegale';
-import { eur, FRAIS_SERVICE, RAYON_DEFAUT, SEUIL_OUVERTURE, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
+import { eur, FRAIS_SERVICE, RAYON_DEFAUT, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
 
 export const metadata = { title: 'CGU et CGV — monpetitpotager.com' };
 
@@ -26,9 +26,8 @@ export default function Cgu() {
       <p>
         Vous ne voyez que les annonces situées dans un rayon de {RAYON_DEFAUT} km
         autour de votre commune (réglable dans votre profil). Cette limite est un
-        principe du service, sans exception. Un secteur n&apos;ouvre aux échanges
-        qu&apos;à partir de {SEUIL_OUVERTURE} membres, afin qu&apos;il y ait
-        réellement de quoi acheter et vendre.
+        principe du service, sans exception. Vous pouvez modifier votre commune de
+        rattachement et votre rayon à tout moment depuis votre profil.
       </p>
 
       <h2>4. Publication des annonces</h2>

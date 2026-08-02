@@ -15,6 +15,16 @@ export default function ModifierProfil({ profil }: { profil: Profil }) {
   const [role, setRole] = useState<Role>(profil.role);
   const [avatar, setAvatar] = useState<string | null>(profil.avatar_url ?? null);
   const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null);
+  const [siteWeb, setSiteWeb] = useState(profil.site_web ?? '');
+  const [reseau, setReseau] = useState(profil.reseau_social ?? '');
+  const [dispos, setDispos] = useState(profil.disponibilites ?? '');
+  const [specialites, setSpecialites] = useState(profil.specialites ?? '');
+  const [paiements, setPaiements] = useState<string[]>(profil.moyens_paiement ?? []);
+  const [methode, setMethode] = useState(profil.methode_culture ?? '');
+  const [label, setLabel] = useState(profil.label_qualite ?? '');
+  const [installation, setInstallation] = useState(
+    profil.annee_installation ? String(profil.annee_installation) : '');
+  const [surface, setSurface] = useState(profil.surface_ha ? String(profil.surface_ha) : '');
   const [envoi, setEnvoi] = useState(false);
   const fichier = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -49,7 +59,18 @@ export default function ModifierProfil({ profil }: { profil: Profil }) {
       telephone: telephone.trim() || null,
       bio: bio.trim() || null,
       role,
-      ...(role === 'pro' ? { raison_sociale: raisonSociale.trim() || null } : {}),
+      site_web: siteWeb.trim() || null,
+      reseau_social: reseau.trim() || null,
+      disponibilites: dispos.trim() || null,
+      specialites: specialites.trim() || null,
+      moyens_paiement: paiements,
+      ...(role === 'pro' ? {
+        raison_sociale: raisonSociale.trim() || null,
+        methode_culture: methode.trim() || null,
+        label_qualite: label.trim() || null,
+        annee_installation: parseInt(installation) || null,
+        surface_ha: parseFloat(surface.replace(',', '.')) || null,
+      } : {}),
       avatar_url,
     }).eq('id', profil.id);
 
@@ -135,6 +156,76 @@ export default function ModifierProfil({ profil }: { profil: Profil }) {
             <p className="help">Visible par les habitants du secteur sur votre fiche.</p>
           )}
       </div>
+
+      <div className="field">
+        <label htmlFor="spe">{role === 'pro' ? 'Vos productions' : 'Ce que vous cultivez'}</label>
+        <input className="inp" id="spe" maxLength={140} value={specialites}
+          onChange={(e) => setSpecialites(e.target.value)}
+          placeholder="Tomates anciennes, petits fruits, plants…" />
+        <p className="help">Quelques mots-clés, séparés par des virgules.</p>
+      </div>
+
+      <div className="field">
+        <label htmlFor="dispo">Quand vous joindre</label>
+        <input className="inp" id="dispo" maxLength={140} value={dispos}
+          onChange={(e) => setDispos(e.target.value)}
+          placeholder="Du mardi au samedi, de 9 h à 12 h" />
+      </div>
+
+      <div className="field">
+        <label id="pai-label">Paiements acceptés</label>
+        <div className="seg seg-4" role="group" aria-labelledby="pai-label">
+          {[['especes', 'Espèces'], ['carte', 'Carte'],
+            ['cheque', 'Chèque'], ['virement', 'Virement']].map(([v, l]) => (
+            <button key={v} type="button" className={paiements.includes(v) ? 'on' : ''}
+              aria-pressed={paiements.includes(v)}
+              onClick={() => setPaiements((p) =>
+                p.includes(v) ? p.filter((x) => x !== v) : [...p, v])}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grille-2">
+        <div className="field">
+          <label htmlFor="web">Site internet</label>
+          <input className="inp" id="web" type="url" maxLength={120} value={siteWeb}
+            onChange={(e) => setSiteWeb(e.target.value)} placeholder="https://" />
+        </div>
+        <div className="field">
+          <label htmlFor="res">Réseau social</label>
+          <input className="inp" id="res" maxLength={120} value={reseau}
+            onChange={(e) => setReseau(e.target.value)} placeholder="Adresse de votre page" />
+        </div>
+      </div>
+
+      {role === 'pro' && (
+        <>
+          <div className="field">
+            <label htmlFor="meth">Méthode de culture</label>
+            <input className="inp" id="meth" maxLength={120} value={methode}
+              onChange={(e) => setMethode(e.target.value)}
+              placeholder="Agriculture biologique, culture raisonnée, permaculture…" />
+          </div>
+          <div className="grille-2">
+            <div className="field">
+              <label htmlFor="lab">Label ou certification</label>
+              <input className="inp" id="lab" maxLength={80} value={label}
+                onChange={(e) => setLabel(e.target.value)} placeholder="AB, Demeter, HVE…" />
+              <p className="help">N&apos;indiquez qu&apos;un label réellement obtenu.</p>
+            </div>
+            <div className="field">
+              <label htmlFor="inst">Année d&apos;installation</label>
+              <input className="inp" id="inst" inputMode="numeric" maxLength={4} value={installation}
+                onChange={(e) => setInstallation(e.target.value)} placeholder="2018" />
+            </div>
+            <div className="field">
+              <label htmlFor="surf">Surface exploitée, en hectares</label>
+              <input className="inp" id="surf" inputMode="decimal" value={surface}
+                onChange={(e) => setSurface(e.target.value)} placeholder="3,5" />
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="row-btn">
         <button className="btn btn-s" style={{ flex: 1 }} onClick={() => setOuvert(false)} disabled={envoi}>

@@ -13,8 +13,7 @@ import PiedDePage from '@/components/PiedDePage';
 import BlocMeteo from '@/components/Meteo';
 import { meteoSecteur } from '@/lib/meteo';
 import { Illustration } from '@/components/Illustrations';
-import { estDeSaison, SEUIL_OUVERTURE } from '@/lib/utils';
-import ListeAttente from './ListeAttente';
+import { estDeSaison } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,20 +34,6 @@ export default async function Accueil({
           <Link className="btn btn-p" href="/profil">Définir mon secteur</Link>
         </div>
       </div></div>
-    );
-  }
-
-  // Le seuil d'ouverture ne s'applique qu'aux membres : un visiteur qui
-  // découvre le service doit pouvoir regarder, même dans un secteur jeune.
-  if (connecte && profil && !secteur.ouvert) {
-    return (
-      <>
-        <BarreHaut commune={secteur.nom} rayonKm={rayonKm} />
-        <div className="app has-tabbar">
-          <ListeAttente secteur={secteur} profilId={profil.id} />
-        </div>
-        <BarreBas />
-      </>
     );
   }
 

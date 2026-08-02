@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
 import { PanneauMarque } from '@/components/PanneauMarque';
-import { SEUIL_OUVERTURE, RAYON_DEFAUT, distanceKm, compresserImage } from '@/lib/utils';
+import { RAYON_DEFAUT, distanceKm, compresserImage } from '@/lib/utils';
 import type { Role } from '@/lib/types';
 import { Marque } from '@/components/Marque';
 
@@ -296,16 +296,11 @@ export default function Inscription() {
             <div><b>{RAYON_DEFAUT}</b><span className="tiny">km de rayon</span></div>
           </div>
         </div>
-        <div className={`gauge${membres >= SEUIL_OUVERTURE ? '' : ' wait'}`} style={{ marginTop: 12 }}>
-          <div className="gauge-top">
-            <span>{membres >= SEUIL_OUVERTURE ? 'Secteur ouvert' : 'Secteur en germination'}</span>
-            <b>{membres} / {SEUIL_OUVERTURE} voisins</b>
-          </div>
-          <div className="gauge-bar"><i style={{ width: `${Math.min(100, (membres / SEUIL_OUVERTURE) * 100)}%` }} /></div>
-          <p>{membres >= SEUIL_OUVERTURE
-            ? 'Vous pourrez acheter et vendre dès votre inscription.'
-            : `Encore ${SEUIL_OUVERTURE - membres} voisins et le secteur s'ouvre. Inscrivez-vous : vous serez prévenu le jour de l'ouverture.`}</p>
-        </div>
+        <p className="tiny" style={{ marginTop: 12 }}>
+          {membres > 0
+            ? `${membres} voisin${membres > 1 ? 's' : ''} déjà inscrit${membres > 1 ? 's' : ''} sur ce secteur.`
+            : 'Vous seriez le premier inscrit sur ce secteur.'}
+        </p>
         <div className="row-btn" style={{ marginTop: 18 }}>
           <button className="btn btn-s" onClick={() => setEtape(0)}>Retour</button>
           <button className="btn btn-p" onClick={() => setEtape(2)}>Continuer</button>

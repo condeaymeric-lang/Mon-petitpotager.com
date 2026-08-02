@@ -4,8 +4,8 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
 import { useToast } from '@/components/Toast';
-import { SEUIL_OUVERTURE } from '@/lib/utils';
 import type { Profil, Secteur } from '@/lib/types';
+import ChangerSecteur from './ChangerSecteur';
 
 const Carte = dynamic(() => import('@/components/Carte'), {
   ssr: false,
@@ -35,7 +35,6 @@ export default function PanneauProfil({
     router.refresh();
   }
 
-  const total = (secteur?.membres ?? 0) + (secteur?.attente ?? 0);
 
   return (
     <>
@@ -44,7 +43,9 @@ export default function PanneauProfil({
         {secteur ? (<>
           <p className="muted" style={{ marginTop: 6 }}>
             {secteur.nom} — {rayon} km.{' '}
-            {secteur.ouvert ? 'Secteur ouvert.' : `En attente d'ouverture (${total}/${SEUIL_OUVERTURE}).`}
+            {(secteur.membres ?? 0) > 0
+              ? `${secteur.membres} voisin${secteur.membres > 1 ? 's' : ''} sur ce secteur.`
+              : 'Vous êtes le premier inscrit sur ce secteur.'}
           </p>
           <div style={{ marginTop: 14 }}>
             <Carte lat={secteur.lat} lon={secteur.lon} nom={secteur.nom} rayonKm={rayon} petite />
@@ -60,8 +61,12 @@ export default function PanneauProfil({
               {envoi ? 'Enregistrement…' : 'Enregistrer'}
             </button>
           )}
+          <ChangerSecteur communeActuelle={secteur.nom} />
         </>) : (
-          <p className="muted" style={{ marginTop: 6 }}>Aucun secteur défini.</p>
+          <>
+            <p className="muted" style={{ marginTop: 6 }}>Aucun secteur défini.</p>
+            <ChangerSecteur communeActuelle={null} />
+          </>
         )}
       </div>
 

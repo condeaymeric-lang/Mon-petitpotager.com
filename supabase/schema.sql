@@ -1402,3 +1402,127 @@ returns table (libelle text, quantite numeric, chiffre numeric) as $$
   ) t
   group by libelle order by 3 desc limit 8;
 $$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  COURRIELS
+--  Tout envoi est d'abord consigné ici. Si le service d'envoi est
+--  indisponible, le message n'est pas perdu : il reste en attente et
+--  l'on sait exactement ce qui n'est pas parti.
+-- ═══════════════════════════════════════════════════════════════
+create table if not exists courriels (
+  id          uuid primary key default uuid_generate_v4(),
+  destinataire text not null,
+  sujet       text not null,
+  corps       text not null,
+  motif       text not null,
+  commande_id uuid references commandes(id) on delete set null,
+  statut      text not null default 'en_attente',  -- en_attente | envoye | echec
+  erreur      text,
+  envoye_le   timestamptz,
+  created_at  timestamptz default now()
+);
+create index if not exists idx_courriels on courriels (statut, created_at desc);
+
+alter table courriels enable row level security;
+-- Aucune règle : la table n'est accessible qu'au serveur, qui utilise
+-- la clé de service. Un membre n'a pas à lire le courrier des autres.
+
+/**
+ * Adresses de l'acheteur et des vendeurs d'une commande, pour
+ * prévenir tout le monde d'un retrait confirmé. Réservée au serveur.
+ */
+create or replace function destinataires_commande(p_commande uuid)
+returns table (email text, prenom text, role text) as $$
+  select u.email::text, p.prenom, 'acheteur'
+    from commandes c
+    join profils p on p.id = c.acheteur_id
+    join auth.users u on u.id = p.id
+   where c.id = p_commande
+  union
+  select u.email::text, p.prenom, 'vendeur'
+    from lignes_commande l
+    join profils p on p.id = l.vendeur_id
+    join auth.users u on u.id = p.id
+   where l.commande_id = p_commande;
+$$ language sql stable security definer set search_path = public;
+
+revoke execute on function destinataires_commande(uuid) from public, anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════
+--  OUVERTURE DES SECTEURS
+--  Le seuil des 200 voisins est levé : tout secteur est ouvert dès
+--  sa création. La liste d'attente reste alimentée, elle sert
+--  désormais à mesurer l'intérêt, plus à conditionner l'accès.
+-- ═══════════════════════════════════════════════════════════════
+alter table secteurs alter column ouvert set default true;
+update secteurs set ouvert = true, ouvert_le = coalesce(ouvert_le, now()) where ouvert = false;
+
+drop trigger if exists trg_ouverture on liste_attente;
+
+-- La règle de création s'adapte : un secteur naît ouvert, mais toujours
+-- sans membre ni inscrit, pour qu'on ne puisse pas s'en inventer un peuplé.
+drop policy if exists creation_secteur on secteurs;
+create policy creation_secteur on secteurs for insert
+  with check (ouvert = true and membres = 0 and attente = 0);
+
+-- ═══════════════════════════════════════════════════════════════
+--  PROFIL PLUS COMPLET
+--  De quoi se présenter vraiment à ses voisins, et pour un
+--  professionnel, décrire son exploitation.
+-- ═══════════════════════════════════════════════════════════════
+alter table profils add column if not exists site_web text;
+alter table profils add column if not exists reseau_social text;
+alter table profils add column if not exists disponibilites text;
+alter table profils add column if not exists moyens_paiement text[] default '{}';
+alter table profils add column if not exists methode_culture text;
+alter table profils add column if not exists label_qualite text;
+alter table profils add column if not exists annee_installation int
+  check (annee_installation is null or annee_installation between 1900 and 2100);
+alter table profils add column if not exists surface_ha numeric(8,2)
+  check (surface_ha is null or surface_ha >= 0);
+alter table profils add column if not exists specialites text;
+
+-- Ces champs sont publics : ils décrivent l'offre, pas la personne.
+grant select (site_web, reseau_social, disponibilites, moyens_paiement,
+              methode_culture, label_qualite, annee_installation,
+              surface_ha, specialites)
+  on profils to anon, authenticated;
+grant update (site_web, reseau_social, disponibilites, moyens_paiement,
+              methode_culture, label_qualite, annee_installation,
+              surface_ha, specialites)
+  on profils to authenticated;
+
+/**
+ * Changement de commune de rattachement.
+ * Le compteur de membres suit le déplacement, sinon les secteurs
+ * afficheraient des voisins qui n'y sont plus.
+ */
+create or replace function changer_secteur(p_code text)
+returns void as $$
+declare
+  v_profil uuid := auth.uid();
+  v_ancien text;
+begin
+  if v_profil is null then
+    raise exception 'Connexion requise.' using errcode = 'check_violation';
+  end if;
+  if not exists (select 1 from public.secteurs where code_insee = p_code) then
+    raise exception 'Commune inconnue.' using errcode = 'check_violation';
+  end if;
+
+  select secteur into v_ancien from public.profils where id = v_profil;
+  if v_ancien is not distinct from p_code then return; end if;
+
+  update public.profils set secteur = p_code, updated_at = now() where id = v_profil;
+
+  if v_ancien is not null then
+    update public.secteurs set membres = greatest(0, membres - 1) where code_insee = v_ancien;
+  end if;
+  update public.secteurs set membres = membres + 1 where code_insee = p_code;
+end $$ language plpgsql security definer set search_path = public;
+
+-- Le compteur de membres avait dérivé : on le recale sur la réalité
+-- des profils, seule source qui fasse foi.
+update secteurs s set membres = (
+  select count(*) from profils p where p.secteur = s.code_insee
+);

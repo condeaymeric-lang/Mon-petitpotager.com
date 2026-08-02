@@ -4,6 +4,7 @@ import { contexteVisite } from '@/lib/contexte';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import BarreVisiteur from '@/components/BarreVisiteur';
 import { Illustration } from '@/components/Illustrations';
+import { FicheDetails } from '@/components/FicheDetails';
 import { eur, distanceKm } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,7 @@ export default async function FicheMembre({ params }: { params: { id: string } }
 
   const { data: m } = await sb
     .from('profils')
-    .select('id, prenom, bio, avatar_url, role, pro_verifie, raison_sociale, est_relais, relais_adresse, relais_horaires, secteur, created_at')
+    .select('id, prenom, bio, avatar_url, role, pro_verifie, raison_sociale, est_relais, relais_adresse, relais_horaires, secteur, created_at, site_web, reseau_social, disponibilites, moyens_paiement, methode_culture, label_qualite, annee_installation, surface_ha, specialites')
     .eq('id', params.id)
     .maybeSingle();
 
@@ -88,6 +89,8 @@ export default async function FicheMembre({ params }: { params: { id: string } }
               : "Ce membre n'a pas encore rédigé sa présentation.")}
           </p>
         </div>
+
+        <FicheDetails p={m} />
 
         {m.est_relais && m.relais_adresse && (
           <div className="card">
