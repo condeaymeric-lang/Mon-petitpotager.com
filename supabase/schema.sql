@@ -680,3 +680,106 @@ returns table (
     a.created_at desc
   limit p_limite;
 $$ language sql stable;
+
+-- ═══════════════════════════════════════════════════════════════
+--  SUIVI DES COMMANDES CÔTÉ VENDEUR
+--  Une commande peut contenir les produits de plusieurs vendeurs.
+--  Chacun signale l'avancement de ses propres lignes ; la commande
+--  n'avance que lorsque tous les vendeurs ont fait leur part.
+--  Le passage à « retirée » reste la confirmation de l'acheteur :
+--  c'est ce qui déclenche le versement.
+-- ═══════════════════════════════════════════════════════════════
+alter table lignes_commande add column if not exists prepare boolean default false not null;
+alter table lignes_commande add column if not exists depose  boolean default false not null;
+
+drop policy if exists maj_lignes on lignes_commande;
+create policy maj_lignes on lignes_commande for update using (vendeur_id = auth.uid());
+
+create or replace function synchroniser_statut_commande() returns trigger as $$
+declare
+  total int; nb_prepare int; nb_depose int; actuel statut_commande;
+begin
+  select count(*), count(*) filter (where prepare), count(*) filter (where depose)
+    into total, nb_prepare, nb_depose
+    from public.lignes_commande where commande_id = new.commande_id;
+
+  select statut into actuel from public.commandes where id = new.commande_id;
+
+  if actuel in ('confirmee', 'en_preparation') and nb_depose = total and total > 0 then
+    update public.commandes set statut = 'deposee' where id = new.commande_id;
+  elsif actuel = 'confirmee' and nb_prepare = total and total > 0 then
+    update public.commandes set statut = 'en_preparation' where id = new.commande_id;
+  end if;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_statut_commande on lignes_commande;
+create trigger trg_statut_commande after update on lignes_commande
+  for each row execute function synchroniser_statut_commande();
+
+-- ═══════════════════════════════════════════════════════════════
+--  INDICATEURS DU TABLEAU DE BORD VENDEUR
+-- ═══════════════════════════════════════════════════════════════
+drop function if exists stats_vendeur(uuid);
+create or replace function stats_vendeur(p_vendeur uuid)
+returns table (
+  ca_total numeric, ca_30j numeric, ca_30j_precedents numeric,
+  en_attente_versement numeric, nb_ventes bigint, nb_clients bigint,
+  a_preparer bigint, a_deposer bigint,
+  annonces_en_ligne bigint, annonces_epuisees bigint,
+  stock_total bigint, vues_totales bigint
+) as $$
+  select
+    coalesce((select sum(l.prix_unitaire * l.quantite) from lignes_commande l
+              join commandes c on c.id = l.commande_id
+              where l.vendeur_id = p_vendeur and c.statut <> 'annulee'), 0),
+    coalesce((select sum(l.prix_unitaire * l.quantite) from lignes_commande l
+              join commandes c on c.id = l.commande_id
+              where l.vendeur_id = p_vendeur and c.statut <> 'annulee'
+                and c.created_at >= now() - interval '30 days'), 0),
+    coalesce((select sum(l.prix_unitaire * l.quantite) from lignes_commande l
+              join commandes c on c.id = l.commande_id
+              where l.vendeur_id = p_vendeur and c.statut <> 'annulee'
+                and c.created_at >= now() - interval '60 days'
+                and c.created_at <  now() - interval '30 days'), 0),
+    coalesce((select sum(l.prix_unitaire * l.quantite) from lignes_commande l
+              join commandes c on c.id = l.commande_id
+              where l.vendeur_id = p_vendeur and l.verse = false
+                and c.statut not in ('annulee')), 0),
+    (select count(*) from lignes_commande l join commandes c on c.id = l.commande_id
+       where l.vendeur_id = p_vendeur and c.statut <> 'annulee'),
+    (select count(distinct c.acheteur_id) from lignes_commande l
+       join commandes c on c.id = l.commande_id
+       where l.vendeur_id = p_vendeur and c.statut <> 'annulee'),
+    (select count(distinct l.commande_id) from lignes_commande l
+       join commandes c on c.id = l.commande_id
+       where l.vendeur_id = p_vendeur and l.prepare = false
+         and c.statut in ('confirmee', 'en_preparation')),
+    (select count(distinct l.commande_id) from lignes_commande l
+       join commandes c on c.id = l.commande_id
+       where l.vendeur_id = p_vendeur and l.prepare = true and l.depose = false
+         and c.statut in ('confirmee', 'en_preparation')),
+    (select count(*) from annonces where vendeur_id = p_vendeur and statut = 'en_ligne' and quantite > 0),
+    (select count(*) from annonces where vendeur_id = p_vendeur and statut = 'epuise'),
+    coalesce((select sum(quantite) from annonces where vendeur_id = p_vendeur and statut = 'en_ligne'), 0),
+    coalesce((select sum(vues) from annonces where vendeur_id = p_vendeur and statut <> 'retire'), 0);
+$$ language sql stable;
+
+-- Produits les plus vendus, avec leur position par rapport au prix de référence.
+drop function if exists top_produits_vendeur(uuid, int);
+create or replace function top_produits_vendeur(p_vendeur uuid, p_limite int default 5)
+returns table (titre text, variete text, quantite bigint, chiffre numeric, prix_moyen numeric)
+as $$
+  select
+    l.titre,
+    l.variete,
+    sum(l.quantite)::bigint,
+    sum(l.prix_unitaire * l.quantite),
+    round(avg(l.prix_unitaire), 2)
+  from lignes_commande l
+  join commandes c on c.id = l.commande_id
+  where l.vendeur_id = p_vendeur and c.statut <> 'annulee'
+  group by l.titre, l.variete
+  order by sum(l.prix_unitaire * l.quantite) desc
+  limit p_limite;
+$$ language sql stable;
