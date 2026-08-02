@@ -1526,3 +1526,32 @@ end $$ language plpgsql security definer set search_path = public;
 update secteurs s set membres = (
   select count(*) from profils p where p.secteur = s.code_insee
 );
+
+-- ═══════════════════════════════════════════════════════════════
+--  CLASSEMENT DES VOISINS
+--  Un classement des membres les plus actifs du secteur. La règle du
+--  rayon s'applique ici comme ailleurs : on ne voit que ses voisins.
+--  Il repose sur les points, donc sur les achats retirés et les
+--  colis remis en point relais, pas sur le nombre d'annonces.
+-- ═══════════════════════════════════════════════════════════════
+create or replace function classement_voisins(
+  p_lat double precision, p_lon double precision,
+  p_rayon_km int default 20, p_limite int default 10
+)
+returns table (
+  id uuid, prenom text, avatar_url text, role text,
+  points int, est_relais boolean, nb_annonces int, commune text
+) as $$
+  select p.id, coalesce(p.raison_sociale, p.prenom), p.avatar_url, p.role::text,
+         p.points, p.est_relais,
+         (select count(*)::int from annonces a
+           where a.vendeur_id = p.id and a.statut = 'en_ligne' and a.quantite > 0),
+         s.nom
+    from profils p
+    join secteurs s on s.code_insee = p.secteur
+   where st_dwithin(st_point(s.lon, s.lat)::geography,
+                    st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+     and p.points > 0
+   order by p.points desc, p.created_at
+   limit p_limite;
+$$ language sql stable security definer set search_path = public;

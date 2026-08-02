@@ -22,17 +22,14 @@ export function EncartPub({
 }
 
 /**
- * Les deux colonnes latérales, placées une fois pour toutes autour de
- * la mise en page. Elles n'apparaissent que sur les écrans assez larges
- * pour les accueillir sans rogner le contenu.
+ * La colonne publicitaire, posée une fois pour toutes à droite de la
+ * mise en page. Elle n'apparaît que sur les écrans assez larges pour
+ * l'accueillir sans rogner le contenu.
  */
-export function ColonnesPub() {
+export function ColonnePub() {
   return (
-    <>
-      <div className="rail rail-g" aria-hidden={false}><EncartPub /></div>
-      <div className="rail rail-d">
-        <EncartPub libelle="Votre ferme, votre boutique, votre marché : visibles ici, auprès de vos voisins seulement." />
-      </div>
-    </>
+    <div className="rail rail-d">
+      <EncartPub libelle="Votre ferme, votre boutique, votre marché : visibles ici, auprès de vos voisins seulement." />
+    </div>
   );
 }

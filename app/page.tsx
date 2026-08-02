@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import Link from 'next/link';
-import { annoncesAutour, catalogue, evenementsAutour, producteursAutour, annoncesEnAvant } from '@/lib/donnees';
+import { annoncesAutour, catalogue, evenementsAutour, producteursAutour, annoncesEnAvant, classementVoisins } from '@/lib/donnees';
 import { contexteVisite } from '@/lib/contexte';
 import ChoixCommune from '@/components/ChoixCommune';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
@@ -8,6 +8,7 @@ import BarreVisiteur from '@/components/BarreVisiteur';
 import CarteAnnonce from '@/components/CarteAnnonce';
 import BarreFiltres from '@/components/BarreFiltres';
 import { EncartPub } from '@/components/EncartPub';
+import { Classement, type Voisin } from '@/components/Classement';
 import CarteEvenement from '@/components/CarteEvenement';
 import PiedDePage from '@/components/PiedDePage';
 import BlocMeteo from '@/components/Meteo';
@@ -37,13 +38,14 @@ export default async function Accueil({
     );
   }
 
-  const [annonces, { produits }, evenements, meteo, producteurs, enAvant] = await Promise.all([
+  const [annonces, { produits }, evenements, meteo, producteurs, enAvant, voisins] = await Promise.all([
     annoncesAutour(secteur.lat, secteur.lon, rayonKm, searchParams.cat),
     catalogue(),
     evenementsAutour(secteur.lat, secteur.lon, rayonKm, 3),
     meteoSecteur(secteur.lat, secteur.lon, secteur.nom),
     producteursAutour(secteur.lat, secteur.lon, rayonKm),
     annoncesEnAvant(secteur.lat, secteur.lon, rayonKm, 12),
+    classementVoisins(secteur.lat, secteur.lon, rayonKm, 10),
   ]);
 
   // « Paniers » n'est pas une catégorie du catalogue : c'est un filtre
@@ -60,6 +62,10 @@ export default async function Accueil({
       {connecte
         ? <BarreHaut commune={secteur.nom} rayonKm={rayonKm} />
         : <BarreVisiteur commune={secteur.nom} rayonKm={rayonKm} />}
+      <div className="rail rail-g">
+        <Classement voisins={voisins as Voisin[]} compact />
+      </div>
+
       <div className={connecte ? 'app has-tabbar' : 'app'}>
         <div className="page">
           <div className="page-head">
@@ -71,6 +77,10 @@ export default async function Accueil({
           </div>
 
           <BarreFiltres categories={categories} active={searchParams.cat} />
+
+          <div className="classement-fil">
+            <Classement voisins={(voisins as Voisin[]).slice(0, 5)} />
+          </div>
 
           {annonces.length > 0 ? (
             <div className="feed">

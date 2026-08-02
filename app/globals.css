@@ -608,17 +608,46 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 @media(min-width:560px){.pub-banniere{flex-direction:row;gap:16px;text-align:left}
   .pub-banniere p{flex:1}}
 .rail{display:none}
-@media(min-width:1320px){
-  .rail{display:block;position:fixed;top:132px;width:168px;z-index:5}
-  .rail-g{left:max(12px,calc(50vw - 640px))}
-  .rail-d{right:max(12px,calc(50vw - 640px))}
-  .rail .pub{min-height:420px}
+/* Les colonnes latérales sont volontairement étroites et détachées du
+   contenu : elles accompagnent la page, elles ne la serrent pas. */
+@media(min-width:1360px){
+  .rail{display:block;position:fixed;top:132px;width:146px;z-index:5;
+    max-height:calc(100vh - 168px);overflow-y:auto;scrollbar-width:thin}
+  .rail-g{left:max(16px,calc(50vw - 700px))}
+  .rail-d{right:max(16px,calc(50vw - 700px))}
+  .rail .pub{min-height:340px}
+  .classement-fil{display:none}
 }
-@media(min-width:1520px){
-  .rail{width:200px}
-  .rail-g{left:calc(50vw - 700px)}
-  .rail-d{right:calc(50vw - 700px)}
+@media(min-width:1600px){
+  .rail{width:170px}
+  .rail-g{left:calc(50vw - 760px)}
+  .rail-d{right:calc(50vw - 760px)}
 }
+
+/* ── Classement des voisins ── */
+.classement{background:var(--paper);border:1.5px solid var(--line);
+  border-radius:var(--r-m);padding:14px}
+.card.classement{padding:16px}
+.classement h3{font-size:.95rem}
+.clst{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:2px}
+.clst a{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:8px;
+  min-height:44px;transition:background .15s}
+.clst a:hover{background:var(--cream)}
+.clst-rang{flex-shrink:0;width:19px;font-size:.78rem;font-weight:700;
+  color:var(--ink-soft);text-align:center;font-variant-numeric:tabular-nums}
+.clst-podium{color:var(--bark)}
+.clst-photo{flex-shrink:0;width:28px;height:28px;border-radius:50%;object-fit:cover}
+.clst-photo-vide{display:grid;place-items:center;background:var(--leaf-soft);
+  color:var(--forest);font-size:.78rem;font-weight:700}
+.clst-nom{flex:1;min-width:0;display:block}
+.clst-nom b{display:block;font-size:.82rem;color:var(--forest);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clst-nom span{display:block;font-size:.73rem;color:var(--ink-soft);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clst-pts{flex-shrink:0;font-size:.8rem;font-weight:700;color:var(--forest-2);
+  font-variant-numeric:tabular-nums}
+.clst-note{margin-top:10px;line-height:1.4}
+.classement-fil{margin-bottom:18px}
 
 /* ── Confort de lecture ── */
 .saut-contenu{position:absolute;left:-9999px;top:0;z-index:100;padding:11px 18px;

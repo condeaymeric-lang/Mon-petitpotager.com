@@ -90,3 +90,16 @@ export async function catalogue() {
   ]);
   return { produits: produits ?? [], varietes: varietes ?? [] };
 }
+
+/** Voisins les plus actifs du rayon, pour le classement. */
+export async function classementVoisins(lat: number, lon: number, rayonKm: number, limite = 10) {
+  const sb = creerClientServeur();
+  const { data, error } = await sb.rpc('classement_voisins', {
+    p_lat: lat, p_lon: lon, p_rayon_km: rayonKm, p_limite: limite,
+  });
+  if (error) {
+    console.error('classement_voisins:', error.message);
+    return [];
+  }
+  return data ?? [];
+}
