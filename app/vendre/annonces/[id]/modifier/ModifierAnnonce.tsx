@@ -9,6 +9,9 @@ import type { ModeTransaction } from '@/lib/types';
 export default function ModifierAnnonce({
   annonce, profilId,
 }: { annonce: any; profilId: string }) {
+  const [titre, setTitre] = useState(annonce.titre ?? '');
+  const [variete, setVariete] = useState(
+    annonce.variete?.nom ?? annonce.variete_libre ?? '');
   const [mode, setMode] = useState<ModeTransaction>(annonce.mode);
   const [prix, setPrix] = useState(String(annonce.prix ?? ''));
   const [quantite, setQuantite] = useState(String(annonce.quantite ?? 1));
@@ -43,11 +46,21 @@ export default function ModifierAnnonce({
 
   async function enregistrer() {
     const p = parseFloat(prix.replace(',', '.'));
+    if (!titre.trim()) { setErreur("Le titre ne peut pas être vide."); return; }
     if (mode === 'vente' && !(p > 0)) { setErreur('Indiquez un prix supérieur à zéro.'); return; }
     setErreur(''); setEnvoi(true);
 
+    // La variété saisie ici remplace celle du catalogue : c'est le texte
+    // affiché qui compte, et le vendeur sait mieux ce qu'il vend.
+    const varieteTexte = variete.trim();
+    const varieteCatalogue = annonce.variete?.nom ?? null;
+
     const sb = creerClient();
     const { error } = await sb.from('annonces').update({
+      titre: titre.trim(),
+      ...(varieteTexte === varieteCatalogue
+        ? {}
+        : { variete_id: null, variete_libre: varieteTexte || null }),
       mode,
       prix: mode === 'vente' ? p : 0,
       quantite: Math.max(0, parseInt(quantite) || 0),
@@ -66,8 +79,21 @@ export default function ModifierAnnonce({
   return (
     <div className="page page-form">
       <div className="page-head">
-        <h1>{annonce.titre}{(annonce.variete?.nom ?? annonce.variete_libre) ? ` — ${annonce.variete?.nom ?? annonce.variete_libre}` : ''}</h1>
-        <p>Modifiez le prix, la quantité, la description ou les photos.</p>
+        <h1>Modifier l&apos;annonce</h1>
+        <p>Titre, variété, prix, quantité, description et photos.</p>
+      </div>
+
+      <div className="field">
+        <label htmlFor="ti-ann">Titre de l&apos;annonce</label>
+        <input className="inp" id="ti-ann" maxLength={80} value={titre}
+          onChange={(e) => setTitre(e.target.value)} />
+        <p className="help">C&apos;est ce que vos voisins lisent en premier.</p>
+      </div>
+
+      <div className="field">
+        <label htmlFor="va-ann">Variété</label>
+        <input className="inp" id="va-ann" maxLength={60} value={variete}
+          placeholder="Facultatif" onChange={(e) => setVariete(e.target.value)} />
       </div>
 
       <div className="field">
