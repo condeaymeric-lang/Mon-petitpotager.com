@@ -270,6 +270,9 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .event-desc{font-size:.84rem;color:var(--ink-soft);margin-top:6px}
 .event-b .item-meta{margin-top:8px}
 
+.commune-on{display:flex;align-items:center;gap:8px;background:var(--leaf-soft);border:1px solid var(--leaf-line);border-radius:var(--r-s);padding:11px 14px;font-size:.88rem}
+.commune-on b{color:var(--forest);font-weight:600}
+
 /* ── Pied de page ── */
 .pied{border-top:1px solid var(--line);margin-top:36px;padding:22px 16px calc(90px + env(safe-area-inset-bottom))}
 .pied-in{max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px 22px;justify-content:center}

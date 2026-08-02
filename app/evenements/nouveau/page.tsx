@@ -13,7 +13,7 @@ export default async function NouvelEvenement() {
     <>
       <BarreHaut commune={secteur.nom} rayonKm={profil.rayon_km} />
       <div className="app has-tabbar">
-        <FormulaireEvenement profilId={profil.id} secteur={secteur} />
+        <FormulaireEvenement profilId={profil.id} secteur={secteur} rayonKm={profil.rayon_km} />
       </div>
       <BarreBas />
     </>

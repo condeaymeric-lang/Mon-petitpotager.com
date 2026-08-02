@@ -1,16 +1,24 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
 import { useToast } from '@/components/Toast';
 import { LIBELLE_TYPE } from '@/components/CarteEvenement';
+import { distanceKm } from '@/lib/utils';
 import type { Secteur, TypeEvenement } from '@/lib/types';
 
 const TYPES: TypeEvenement[] = ['marche', 'fete', 'brocante', 'porte_ouverte', 'autre'];
+const GEO = 'https://geo.api.gouv.fr';
+
+interface Commune {
+  nom: string;
+  code: string;
+  centre: { coordinates: [number, number] };
+}
 
 export default function FormulaireEvenement({
-  profilId, secteur,
-}: { profilId: string; secteur: Secteur }) {
+  profilId, secteur, rayonKm,
+}: { profilId: string; secteur: Secteur; rayonKm: number }) {
   const [titre, setTitre] = useState('');
   const [type, setType] = useState<TypeEvenement>('fete');
   const [debut, setDebut] = useState('');
@@ -18,13 +26,54 @@ export default function FormulaireEvenement({
   const [description, setDescription] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
+
+  // Commune de l'événement : celle du membre par défaut, modifiable.
+  const [commune, setCommune] = useState({
+    nom: secteur.nom, lat: secteur.lat, lon: secteur.lon, km: 0,
+  });
+  const [recherche, setRecherche] = useState('');
+  const [resultats, setResultats] = useState<Commune[]>([]);
+  const [chargeGeo, setChargeGeo] = useState(false);
+
   const router = useRouter();
   const toast = useToast();
+
+  useEffect(() => {
+    const q = recherche.trim();
+    if (q.length < 2) { setResultats([]); return; }
+    setChargeGeo(true);
+    const t = setTimeout(async () => {
+      const params = /^\d{5}$/.test(q)
+        ? `codePostal=${q}`
+        : `nom=${encodeURIComponent(q)}&boost=population`;
+      const r = await fetch(`${GEO}/communes?${params}&fields=nom,code,centre&limit=12&format=json`)
+        .then((x) => x.json()).catch(() => []);
+      setResultats(Array.isArray(r) ? r.filter((x: any) => x.centre) : []);
+      setChargeGeo(false);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [recherche]);
+
+  function choisirCommune(c: Commune) {
+    const [lon, lat] = c.centre.coordinates;
+    const km = +distanceKm(secteur.lat, secteur.lon, lat, lon).toFixed(1);
+    if (km > rayonKm) {
+      setErreur(
+        `${c.nom} est à ${km} km, au-delà de votre rayon de ${rayonKm} km. ` +
+        `Personne ne verrait cet événement, pas même vous.`
+      );
+      return;
+    }
+    setErreur('');
+    setCommune({ nom: c.nom, lat, lon, km });
+    setRecherche('');
+    setResultats([]);
+  }
 
   async function publier(e: React.FormEvent) {
     e.preventDefault();
     if (!titre.trim()) { setErreur("Donnez un nom à l'événement."); return; }
-    if (!debut) { setErreur('Indiquez la date et l\'heure de début.'); return; }
+    if (!debut) { setErreur("Indiquez la date et l'heure de début."); return; }
     if (new Date(debut).getTime() < Date.now()) {
       setErreur('La date doit être dans le futur.');
       return;
@@ -39,9 +88,9 @@ export default function FormulaireEvenement({
       debut: new Date(debut).toISOString(),
       lieu: lieu.trim() || null,
       description: description.trim() || null,
-      commune: secteur.nom,
-      lat: secteur.lat,
-      lon: secteur.lon,
+      commune: commune.nom,
+      lat: commune.lat,
+      lon: commune.lon,
     });
 
     setEnvoi(false);
@@ -87,11 +136,50 @@ export default function FormulaireEvenement({
         </div>
 
         <div className="field">
-          <label htmlFor="li">Lieu</label>
+          <label htmlFor="rech">Commune</label>
+          <div className="commune-on">
+            <span>
+              <b>{commune.nom}</b>
+              {commune.km > 0 && <span className="tiny"> · à {commune.km} km de chez vous</span>}
+            </span>
+          </div>
+          <input className="inp" id="rech" style={{ marginTop: 8 }}
+            value={recherche} onChange={(ev) => setRecherche(ev.target.value)}
+            placeholder="Changer de commune : nom ou code postal"
+            autoComplete="off" />
+          <p className="help" aria-live="polite">
+            {chargeGeo ? 'Recherche…'
+              : resultats.length > 0 ? `${resultats.length} commune${resultats.length > 1 ? 's' : ''} trouvée${resultats.length > 1 ? 's' : ''}.`
+              : `Seules les communes situées à moins de ${rayonKm} km peuvent être choisies.`}
+          </p>
+
+          {resultats.length > 0 && (
+            <div className="var-list" style={{ marginTop: 8 }}>
+              {resultats.map((c) => {
+                const [lon, lat] = c.centre.coordinates;
+                const km = +distanceKm(secteur.lat, secteur.lon, lat, lon).toFixed(1);
+                const trop = km > rayonKm;
+                return (
+                  <button key={c.code} type="button" className="var-btn"
+                    onClick={() => choisirCommune(c)}
+                    aria-disabled={trop}
+                    style={trop ? { opacity: .5 } : undefined}>
+                    <div>
+                      <b>{c.nom}</b>
+                      <span>{km} km{trop ? ' — hors de votre rayon' : ''}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="field">
+          <label htmlFor="li">Lieu précis</label>
           <input className="inp" id="li" maxLength={160}
             value={lieu} onChange={(ev) => setLieu(ev.target.value)}
             placeholder="Place du village" />
-          <p className="help">La commune {secteur.nom} est ajoutée automatiquement.</p>
         </div>
 
         <div className="field">
