@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { profilCourant } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
-import { eur, SEUIL_OUVERTURE } from '@/lib/utils';
+import { eur, SEUIL_OUVERTURE, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
 import PanneauProfil from './PanneauProfil';
+import BonsAchat from './BonsAchat';
 import ModifierProfil from './ModifierProfil';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,11 @@ export default async function Profil() {
     sb.from('mouvements_points').select('*').eq('profil_id', profil.id)
       .order('created_at', { ascending: false }).limit(20),
   ]);
+
+  const { data: bons } = await sb.from('bons_achat')
+    .select('id, code, montant, utilise, expire_le')
+    .eq('profil_id', profil.id)
+    .order('created_at', { ascending: false });
 
   const total = (secteur?.membres ?? 0) + (secteur?.attente ?? 0);
 
@@ -46,7 +52,7 @@ export default async function Profil() {
           <div className="pts-card">
             <small>MES POINTS</small>
             <b>{profil.points}</b>
-            <small>soit {eur(profil.points / 100)} de réduction</small>
+            <small>{PALIER_POINTS} points = un bon de {eur(PALIER_EUROS)}</small>
           </div>
 
           <div className="card">
@@ -57,6 +63,8 @@ export default async function Profil() {
             </div>
           </div>
         </div>
+
+        <BonsAchat points={profil.points} bons={bons ?? []} />
 
         <ModifierProfil profil={profil} />
         <PanneauProfil profil={profil} secteur={secteur} />

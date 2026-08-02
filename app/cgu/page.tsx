@@ -1,5 +1,5 @@
 import PageLegale from '@/components/PageLegale';
-import { eur, FRAIS_SERVICE, RAYON_DEFAUT, SEUIL_OUVERTURE, POINTS_POUR_UN_EURO } from '@/lib/utils';
+import { eur, FRAIS_SERVICE, RAYON_DEFAUT, SEUIL_OUVERTURE, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
 
 export const metadata = { title: 'CGU et CGV — monpetitpotager.com' };
 
@@ -88,12 +88,23 @@ export default function Cgu() {
         n&apos;assure aucun transport ni aucune livraison.
       </p>
 
-      <h2>9. Points de fidélité</h2>
+      <h2>9. Points de fidélité et bons d&apos;achat</h2>
       <p>
         Les points sont attribués lors de la publication d&apos;annonces et des achats.
-        Ils valent {POINTS_POUR_UN_EURO} points pour {eur(1)} de réduction, sont
-        strictement personnels, non cessibles et sans valeur monétaire. Ils sont perdus
-        à la fermeture du compte.
+        Ils ne constituent pas une monnaie et ne sont pas dépensables directement.
+      </p>
+      <p>
+        À partir de {PALIER_POINTS} points, le membre peut demander leur conversion en un
+        bon d&apos;achat de {eur(PALIER_EUROS)}. La conversion débite définitivement les
+        points correspondants. Le bon est nominatif, à usage unique, valable un an à
+        compter de son émission, et déductible du sous-total d&apos;une commande. Si le
+        montant du bon dépasse celui de la commande, la différence n&apos;est ni reportée
+        ni remboursée.
+      </p>
+      <p>
+        Les points comme les bons sont strictement personnels, non cessibles, sans valeur
+        monétaire et ne peuvent en aucun cas être échangés contre de l&apos;argent. Ils
+        sont perdus à la fermeture du compte.
       </p>
 
       <h2>10. Responsabilité</h2>

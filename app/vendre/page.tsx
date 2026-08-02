@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { profilCourant, catalogue } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import { Illustration } from '@/components/Illustrations';
-import { eur, estDeSaison } from '@/lib/utils';
+import { eur, estDeSaison, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
 import ListeAttente from '../ListeAttente';
 
 export const dynamic = 'force-dynamic';
@@ -102,7 +102,7 @@ export default async function EspaceVendeur() {
                 ? evolution == null
                   ? `${eur(s.ca_total)} depuis le début`
                   : `${evolution >= 0 ? '+' : ''}${evolution} % par rapport aux 30 jours précédents`
-                : `soit ${eur(profil.points / 100)} de réduction sur vos achats`}
+                : `${PALIER_POINTS} points = un bon d'achat de ${eur(PALIER_EUROS)}`}
             </small>
           </div>
 

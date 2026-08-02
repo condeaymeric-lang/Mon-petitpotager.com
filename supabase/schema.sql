@@ -861,3 +861,107 @@ returns table (
     a.created_at desc
   limit p_limite;
 $$ language sql stable;
+
+-- ═══════════════════════════════════════════════════════════════
+--  BONS D'ACHAT
+--  Les points ne se dépensent plus au centime près : ils se
+--  convertissent par paliers de 1000 points en un bon de 10 €.
+--  Le bon est nominatif, à usage unique, et valable un an.
+-- ═══════════════════════════════════════════════════════════════
+create table if not exists bons_achat (
+  id          uuid primary key default uuid_generate_v4(),
+  profil_id   uuid references profils(id) on delete cascade not null,
+  code        text unique not null,
+  montant     numeric(8,2) not null check (montant > 0),
+  points_utilises int not null check (points_utilises > 0),
+  utilise     boolean default false not null,
+  commande_id uuid references commandes(id) on delete set null,
+  utilise_le  timestamptz,
+  expire_le   timestamptz not null default (now() + interval '1 year'),
+  created_at  timestamptz default now()
+);
+create index if not exists idx_bons_profil on bons_achat (profil_id, utilise);
+
+alter table bons_achat enable row level security;
+
+drop policy if exists lecture_bons on bons_achat;
+create policy lecture_bons on bons_achat for select using (profil_id = auth.uid());
+drop policy if exists maj_bons on bons_achat;
+-- Ni création ni modification directes : un membre pourrait sinon s'octroyer
+-- un bon, en changer le montant, ou remettre à zéro un bon déjà consommé.
+-- Tout passe par convertir_points() et utiliser_bon().
+
+alter table commandes add column if not exists bon_id uuid references bons_achat(id) on delete set null;
+
+/**
+ * Convertit des points en bon d'achat, de façon atomique.
+ * Refuse si le solde est insuffisant : le contrôle est ici, pas dans
+ * le navigateur, sinon n'importe qui pourrait se créer des bons.
+ */
+create or replace function convertir_points(p_multiples int)
+returns table (code text, montant numeric) as $$
+declare
+  v_profil uuid := auth.uid();
+  v_points_requis int;
+  v_montant numeric;
+  v_solde int;
+  v_code text;
+begin
+  if v_profil is null then
+    raise exception 'Connexion requise.' using errcode = 'check_violation';
+  end if;
+  if p_multiples is null or p_multiples < 1 then
+    raise exception 'Nombre de paliers invalide.' using errcode = 'check_violation';
+  end if;
+
+  v_points_requis := p_multiples * 1000;
+  v_montant := p_multiples * 10;
+
+  select points into v_solde from public.profils where id = v_profil for update;
+  if v_solde is null or v_solde < v_points_requis then
+    raise exception 'Points insuffisants pour ce bon d''achat.' using errcode = 'check_violation';
+  end if;
+
+  v_code := 'BON-' || upper(substr(md5(gen_random_uuid()::text), 1, 8));
+
+  update public.profils set points = points - v_points_requis, updated_at = now()
+    where id = v_profil;
+
+  insert into public.mouvements_points (profil_id, montant, motif)
+    values (v_profil, -v_points_requis, 'Conversion en bon d''achat ' || v_code);
+
+  insert into public.bons_achat (profil_id, code, montant, points_utilises)
+    values (v_profil, v_code, v_montant, v_points_requis);
+
+  return query select v_code, v_montant;
+end $$ language plpgsql security definer set search_path = public;
+
+/**
+ * Consomme un bon sur une commande. Atomique : le « utilise = false » dans
+ * le WHERE garantit qu'un même bon ne peut pas servir deux fois, même si
+ * deux onglets valident en même temps.
+ */
+create or replace function utiliser_bon(p_bon uuid, p_commande uuid)
+returns numeric as $$
+declare
+  v_profil uuid := auth.uid();
+  v_montant numeric;
+begin
+  if v_profil is null then
+    raise exception 'Connexion requise.' using errcode = 'check_violation';
+  end if;
+
+  update public.bons_achat
+     set utilise = true, utilise_le = now(), commande_id = p_commande
+   where id = p_bon
+     and profil_id = v_profil
+     and utilise = false
+     and expire_le > now()
+  returning montant into v_montant;
+
+  if v_montant is null then
+    raise exception 'Bon d''achat indisponible ou déjà utilisé.' using errcode = 'check_violation';
+  end if;
+
+  return v_montant;
+end $$ language plpgsql security definer set search_path = public;

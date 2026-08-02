@@ -2,7 +2,9 @@ export const SEUIL_OUVERTURE = 200;
 export const RAYON_DEFAUT = 20;
 export const FRAIS_SERVICE = 0.7;
 export const POINTS_PAR_EURO = 1;
-export const POINTS_POUR_UN_EURO = 100;
+/** Palier de conversion : 1000 points donnent un bon d'achat de 10 €. */
+export const PALIER_POINTS = 1000;
+export const PALIER_EUROS = 10;
 
 export const eur = (n: number) =>
   n.toFixed(2).replace('.', ',') + ' €';

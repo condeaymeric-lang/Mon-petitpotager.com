@@ -1,12 +1,19 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePanier } from '@/components/PanierContext';
 import { useToast } from '@/components/Toast';
 import { Illustration } from '@/components/Illustrations';
 import { creerClient } from '@/lib/supabase-client';
-import { eur, FRAIS_SERVICE, POINTS_POUR_UN_EURO } from '@/lib/utils';
+import { eur, FRAIS_SERVICE, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
+
+interface Bon {
+  id: string;
+  code: string;
+  montant: number;
+  expire_le: string;
+}
 
 interface Relais {
   id: string;
@@ -19,7 +26,8 @@ export default function ContenuPanier({
   points, secteurCode, commune, relais,
 }: { points: number; secteurCode: string | null; commune: string; relais: Relais[] }) {
   const { lignes, sousTotal, totalReference, modifier, vider } = usePanier();
-  const [ptsUtilises, setPts] = useState(0);
+  const [bons, setBons] = useState<Bon[]>([]);
+  const [bonId, setBonId] = useState('');
   const [retrait, setRetrait] = useState<'relais' | 'main_propre'>(relais.length > 0 ? 'relais' : 'main_propre');
   const [relaisId, setRelaisId] = useState(relais[0]?.id ?? '');
   const [envoi, setEnvoi] = useState(false);
@@ -31,8 +39,21 @@ export default function ContenuPanier({
   const aDesVentes = lignes.some((l) => l.mode === 'vente');
   const fraisService = aDesVentes ? FRAIS_SERVICE : 0;
 
-  const maxPts = Math.min(points, Math.floor(sousTotal * POINTS_POUR_UN_EURO));
-  const reduction = Math.min(ptsUtilises, maxPts) / POINTS_POUR_UN_EURO;
+  // Bons d'achat disponibles : non utilisés et non expirés.
+  useEffect(() => {
+    const sb = creerClient();
+    sb.from('bons_achat')
+      .select('id, code, montant, expire_le')
+      .eq('utilise', false)
+      .gt('expire_le', new Date().toISOString())
+      .order('expire_le', { ascending: true })
+      .then(({ data }) => setBons((data ?? []) as Bon[]));
+  }, []);
+
+  const bonChoisi = bons.find((b) => b.id === bonId) ?? null;
+  // Un bon ne peut pas dépasser le montant du panier : le reliquat est perdu,
+  // on prévient donc l'acheteur avant qu'il ne l'utilise.
+  const reduction = bonChoisi ? Math.min(bonChoisi.montant, sousTotal) : 0;
   const total = Math.max(0, sousTotal - reduction) + fraisService;
   const economie = totalReference - sousTotal;
 
@@ -61,7 +82,8 @@ export default function ContenuPanier({
       secteur: secteurCode,
       sous_total: sousTotal,
       reduction,
-      points_utilises: Math.min(ptsUtilises, maxPts),
+      bon_id: bonChoisi?.id ?? null,
+      points_utilises: 0,
       frais_service: fraisService,
       total,
       mode_retrait: retrait,
@@ -106,13 +128,22 @@ export default function ContenuPanier({
         .eq('id', l.annonce_id);
     }));
 
-    // Points : on débite ce qui est utilisé, on crédite l'achat
-    if (ptsUtilises > 0) {
-      await sb.rpc('ajouter_points', {
-        p_profil: user.id, p_montant: -Math.min(ptsUtilises, maxPts),
-        p_motif: `Réduction — ${commande.reference}`, p_commande: commande.id,
+    // Le bon est consommé : la condition « utilise = false » dans la requête
+    // empêche qu'il serve deux fois si deux onglets valident en même temps.
+    if (bonChoisi) {
+      const { error: eBon } = await sb.rpc('utiliser_bon', {
+        p_bon: bonChoisi.id, p_commande: commande.id,
       });
+      if (eBon) {
+        // Le bon n'a pas pu être consommé : on ne fait pas cadeau de la
+        // réduction, on repasse la commande au montant plein.
+        await sb.from('commandes')
+          .update({ reduction: 0, bon_id: null, total: sousTotal + fraisService })
+          .eq('id', commande.id);
+        toast("Le bon d'achat n'a pas pu être appliqué : commande au tarif normal.");
+      }
     }
+    // Les points de l'achat sont crédités : ils se convertiront en bon plus tard.
     await sb.rpc('ajouter_points', {
       p_profil: user.id, p_montant: Math.floor(sousTotal),
       p_motif: `Achat — ${commande.reference}`, p_commande: commande.id,
@@ -193,29 +224,35 @@ export default function ContenuPanier({
 
       {aDesVentes && (
         <div className="card">
-          <h3>Utiliser mes points</h3>
+          <h3>Mes bons d'achat</h3>
           <p className="tiny" style={{ marginTop: 5 }}>
-            {points} points disponibles, soit {eur(points / POINTS_POUR_UN_EURO)}.
+            {points} points cumulés. {PALIER_POINTS} points se convertissent en un bon de{' '}
+            {eur(PALIER_EUROS)} depuis votre profil.
           </p>
-          {maxPts > 0 ? (
-            <>
-              <label htmlFor="pts-range" className="tiny" style={{ display: 'block', marginTop: 14 }}>
-                Points à utiliser sur cette commande
-              </label>
-              <input type="range" id="pts-range" min={0} max={maxPts} step={10} value={ptsUtilises}
-                style={{ accentColor: '#6FA83A', marginTop: 6 }}
-                onChange={(e) => setPts(+e.target.value)} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }} aria-live="polite">
-                <span className="tiny">0</span>
-                <span className="tiny" style={{ color: 'var(--forest-2)', fontWeight: 600 }}>
-                  {ptsUtilises} pts → −{eur(reduction)}
-                </span>
-                <span className="tiny">{maxPts}</span>
-              </div>
-            </>
+          {bons.length > 0 ? (
+            <div className="var-list" style={{ marginTop: 12 }} role="group" aria-label="Bon d'achat à utiliser">
+              <button type="button" className={`var-btn${bonId === '' ? ' on' : ''}`} onClick={() => setBonId('')}>
+                <div><b>Ne pas utiliser de bon</b><span>Vos bons restent valables pour une prochaine commande.</span></div>
+              </button>
+              {bons.map((b) => (
+                <button key={b.id} type="button" className={`var-btn${bonId === b.id ? ' on' : ''}`}
+                  onClick={() => setBonId(b.id)}>
+                  <div>
+                    <b>{b.code} · {eur(b.montant)}</b>
+                    <span>Valable jusqu'au {new Date(b.expire_le).toLocaleDateString('fr-FR')}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           ) : (
             <p className="tiny" style={{ marginTop: 10 }}>
-              Cumulez des points en publiant, en vendant et en invitant vos voisins.
+              Aucun bon disponible. Cumulez des points en achetant, en publiant et en vendant.
+            </p>
+          )}
+          {bonChoisi && bonChoisi.montant > sousTotal && (
+            <p className="tiny" style={{ marginTop: 10, color: 'var(--bark)' }} aria-live="polite">
+              Ce bon vaut {eur(bonChoisi.montant)} et votre panier {eur(sousTotal)} : la différence
+              ne sera pas reportée sur une prochaine commande.
             </p>
           )}
         </div>
@@ -223,9 +260,9 @@ export default function ContenuPanier({
 
       <div className="card">
         <div className="sum-row"><span>Sous-total</span><span>{eur(sousTotal)}</span></div>
-        {reduction > 0 && (
+        {reduction > 0 && bonChoisi && (
           <div className="sum-row disc">
-            <span>Réduction ({ptsUtilises} points)</span><span>−{eur(reduction)}</span>
+            <span>Bon d'achat {bonChoisi.code}</span><span>−{eur(reduction)}</span>
           </div>
         )}
         <div className="sum-row">
