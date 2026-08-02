@@ -1660,3 +1660,61 @@ returns table (
    order by a.created_at desc
    limit p_limite;
 $$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  VIE DES ÉVÉNEMENTS
+--  Un événement ne s'arrête pas quand il est passé : ceux qui y
+--  étaient racontent, montrent leurs photos. C'est ce qui donne
+--  envie de venir la fois suivante.
+-- ═══════════════════════════════════════════════════════════════
+drop policy if exists maj_evenement on evenements;
+create policy maj_evenement on evenements for update
+  using (auteur_id = auth.uid() or est_moderateur());
+drop policy if exists suppr_evenement on evenements;
+create policy suppr_evenement on evenements for delete
+  using (auteur_id = auth.uid() or est_moderateur());
+
+create table if not exists publications_evenement (
+  id           uuid primary key default uuid_generate_v4(),
+  evenement_id uuid references evenements(id) on delete cascade not null,
+  auteur_id    uuid references profils(id) on delete cascade not null,
+  texte        text not null check (length(trim(texte)) between 1 and 1000),
+  photos       text[] default '{}',
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+create index if not exists idx_pub_evt on publications_evenement (evenement_id, created_at desc);
+
+alter table publications_evenement enable row level security;
+
+drop policy if exists lecture_pub_evt on publications_evenement;
+create policy lecture_pub_evt on publications_evenement for select using (true);
+drop policy if exists maj_pub_evt on publications_evenement;
+create policy maj_pub_evt on publications_evenement for update using (auteur_id = auth.uid());
+drop policy if exists suppr_pub_evt on publications_evenement;
+create policy suppr_pub_evt on publications_evenement for delete
+  using (auteur_id = auth.uid() or est_moderateur());
+
+-- On ne publie pas sur un événement qui n'a pas commencé : sinon le mur
+-- se remplit de commentaires d'avant, et ce n'est plus un souvenir.
+drop policy if exists creation_pub_evt on publications_evenement;
+create policy creation_pub_evt on publications_evenement for insert
+  with check (
+    auteur_id = auth.uid()
+    and exists (select 1 from evenements e
+                 where e.id = evenement_id and e.debut <= now())
+  );
+
+/** Publications d'un événement, avec l'auteur, pour l'affichage. */
+create or replace function publications_de(p_evenement uuid)
+returns table (
+  id uuid, texte text, photos text[], created_at timestamptz,
+  auteur_id uuid, auteur_prenom text, auteur_avatar text, auteur_role text
+) as $$
+  select pu.id, pu.texte, pu.photos, pu.created_at,
+         pr.id, coalesce(pr.raison_sociale, pr.prenom), pr.avatar_url, pr.role::text
+    from publications_evenement pu
+    join profils pr on pr.id = pu.auteur_id
+   where pu.evenement_id = p_evenement
+   order by pu.created_at desc;
+$$ language sql stable security definer set search_path = public;

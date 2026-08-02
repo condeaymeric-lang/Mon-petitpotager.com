@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
 import { useToast } from '@/components/Toast';
 import { LIBELLE_TYPE } from '@/components/CarteEvenement';
-import { distanceKm } from '@/lib/utils';
+import { distanceKm, compresserImage } from '@/lib/utils';
 import type { Secteur, TypeEvenement } from '@/lib/types';
 
 const TYPES: TypeEvenement[] = ['marche', 'fete', 'brocante', 'porte_ouverte', 'autre'];
@@ -16,20 +16,45 @@ interface Commune {
   centre: { coordinates: [number, number] };
 }
 
+interface EvenementExistant {
+  id: string; titre: string; type: TypeEvenement; debut: string;
+  lieu: string | null; description: string | null; commune: string;
+  lat: number | null; lon: number | null; photos: string[] | null;
+}
+
+/** Valeur attendue par un champ datetime-local, en heure locale. */
+function pourChamp(iso: string) {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 export default function FormulaireEvenement({
-  profilId, secteur, rayonKm,
-}: { profilId: string; secteur: Secteur; rayonKm: number }) {
-  const [titre, setTitre] = useState('');
-  const [type, setType] = useState<TypeEvenement>('fete');
-  const [debut, setDebut] = useState('');
-  const [lieu, setLieu] = useState('');
-  const [description, setDescription] = useState('');
+  profilId, secteur, rayonKm, evenement, moderation = false,
+}: {
+  profilId: string; secteur: Secteur; rayonKm: number;
+  evenement?: EvenementExistant; moderation?: boolean;
+}) {
+  const modif = !!evenement;
+  const [titre, setTitre] = useState(evenement?.titre ?? '');
+  const [type, setType] = useState<TypeEvenement>(evenement?.type ?? 'fete');
+  const [debut, setDebut] = useState(evenement ? pourChamp(evenement.debut) : '');
+  const [lieu, setLieu] = useState(evenement?.lieu ?? '');
+  const [description, setDescription] = useState(evenement?.description ?? '');
+  const [photos, setPhotos] = useState<string[]>(evenement?.photos ?? []);
+  const [envoiPhoto, setEnvoiPhoto] = useState(false);
+  const fichier = useRef<HTMLInputElement>(null);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
 
   // Commune de l'événement : celle du membre par défaut, modifiable.
   const [commune, setCommune] = useState({
-    nom: secteur.nom, lat: secteur.lat, lon: secteur.lon, km: 0,
+    nom: evenement?.commune ?? secteur.nom,
+    lat: evenement?.lat ?? secteur.lat,
+    lon: evenement?.lon ?? secteur.lon,
+    km: evenement?.lat && evenement?.lon
+      ? +distanceKm(secteur.lat, secteur.lon, evenement.lat, evenement.lon).toFixed(1)
+      : 0,
   });
   const [recherche, setRecherche] = useState('');
   const [resultats, setResultats] = useState<Commune[]>([]);
@@ -70,19 +95,41 @@ export default function FormulaireEvenement({
     setResultats([]);
   }
 
+  async function ajouterPhotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const fichiers = Array.from(e.target.files ?? []);
+    if (!fichiers.length) return;
+    setEnvoiPhoto(true);
+    const sb = creerClient();
+
+    for (const f of fichiers.slice(0, 6 - photos.length)) {
+      try {
+        const blob = await compresserImage(f, 1400, 0.8);
+        const chemin = `${profilId}/evenement-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+        const { error } = await sb.storage.from('photos')
+          .upload(chemin, blob, { contentType: 'image/jpeg' });
+        if (error) { toast("Une photo n'a pas pu être envoyée."); continue; }
+        const url = sb.storage.from('photos').getPublicUrl(chemin).data.publicUrl;
+        setPhotos((p) => [...p, url]);
+      } catch {
+        toast('Photo illisible, essayez-en une autre.');
+      }
+    }
+
+    setEnvoiPhoto(false);
+    if (fichier.current) fichier.current.value = '';
+  }
+
   async function publier(e: React.FormEvent) {
     e.preventDefault();
     if (!titre.trim()) { setErreur("Donnez un nom à l'événement."); return; }
     if (!debut) { setErreur("Indiquez la date et l'heure de début."); return; }
-    if (new Date(debut).getTime() < Date.now()) {
+    if (!modif && new Date(debut).getTime() < Date.now()) {
       setErreur('La date doit être dans le futur.');
       return;
     }
     setErreur(''); setEnvoi(true);
 
-    const { error } = await creerClient().from('evenements').insert({
-      auteur_id: profilId,
-      secteur: secteur.code_insee,
+    const champs = {
       titre: titre.trim(),
       type,
       debut: new Date(debut).toISOString(),
@@ -91,15 +138,25 @@ export default function FormulaireEvenement({
       commune: commune.nom,
       lat: commune.lat,
       lon: commune.lon,
-    });
+      photos,
+    };
+
+    const sb = creerClient();
+    const { error } = modif
+      ? await sb.from('evenements').update(champs).eq('id', evenement!.id)
+      : await sb.from('evenements').insert({
+          ...champs, auteur_id: profilId, secteur: secteur.code_insee,
+        });
 
     setEnvoi(false);
     if (error) {
-      setErreur("L'événement n'a pas pu être publié. Vérifiez votre connexion et réessayez.");
+      setErreur(modif
+        ? "Les modifications n'ont pas pu être enregistrées. Réessayez."
+        : "L'événement n'a pas pu être publié. Vérifiez votre connexion et réessayez.");
       return;
     }
-    toast('Événement publié');
-    router.push('/evenements');
+    toast(modif ? 'Événement mis à jour' : 'Événement publié');
+    router.push(modif ? `/evenements/${evenement!.id}` : '/evenements');
     router.refresh();
   }
 
@@ -107,9 +164,23 @@ export default function FormulaireEvenement({
     <div className="page page-form">
       <button className="back" onClick={() => router.back()}>← Retour</button>
       <div className="page-head">
-        <h1>Proposer un événement</h1>
-        <p>Il sera visible par les habitants du secteur, dans leur rayon.</p>
+        <h1>{modif ? "Modifier l'événement" : 'Proposer un événement'}</h1>
+        <p>
+          {modif
+            ? 'Les changements sont visibles aussitôt par les habitants du secteur.'
+            : 'Il sera visible par les habitants du secteur, dans leur rayon.'}
+        </p>
       </div>
+
+      {moderation && (
+        <div className="avert" role="status">
+          <b>Vous modifiez l&apos;événement d&apos;un autre membre.</b>
+          <p>
+            Cette correction se fait au titre de la modération. Prévenez
+            l&apos;organisateur si elle change le sens de son annonce.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={publier}>
         <div className="field">
@@ -188,9 +259,34 @@ export default function FormulaireEvenement({
             value={description} onChange={(ev) => setDescription(ev.target.value)} />
         </div>
 
+        <div className="field">
+          <label id="photos-label">Photos</label>
+          <p className="help">
+            Jusqu&apos;à six photos. Avant l&apos;événement, une affiche ou le lieu ;
+            après, ce qu&apos;il s&apos;y est passé.
+          </p>
+          <div className="evt-photos" role="group" aria-labelledby="photos-label">
+            {photos.map((url, i) => (
+              <div className="evt-photo" key={url}>
+                <img src={url} alt="" loading="lazy" />
+                <button type="button" className="btn-x" aria-label={`Retirer la photo ${i + 1}`}
+                  onClick={() => setPhotos((p) => p.filter((x) => x !== url))}>×</button>
+              </div>
+            ))}
+            {photos.length < 6 && (
+              <button type="button" className="evt-photo evt-photo-plus"
+                onClick={() => fichier.current?.click()} disabled={envoiPhoto}>
+                {envoiPhoto ? 'Envoi…' : 'Ajouter'}
+              </button>
+            )}
+          </div>
+          <input ref={fichier} type="file" accept="image/*" multiple hidden
+            onChange={ajouterPhotos} />
+        </div>
+
         {erreur && <p className="errmsg" style={{ marginBottom: 12 }} role="alert">{erreur}</p>}
-        <button className="btn btn-p" disabled={envoi}>
-          {envoi ? 'Publication…' : 'Publier l’événement'}
+        <button className="btn btn-p" disabled={envoi || envoiPhoto}>
+          {envoi ? 'Enregistrement…' : modif ? 'Enregistrer les modifications' : "Publier l'événement"}
         </button>
       </form>
     </div>

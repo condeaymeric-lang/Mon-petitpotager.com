@@ -682,3 +682,22 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .mod-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;
   padding-top:12px;border-top:1px solid var(--line)}
 .mod-actions .btn{width:auto;flex:1 1 auto;min-width:132px}
+
+/* ── Photos et mur des événements ── */
+.evt-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.evt-photo{position:relative;display:block;aspect-ratio:1;border-radius:var(--r-s);
+  overflow:hidden;background:var(--cream);border:1px solid var(--line)}
+.evt-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.evt-photo .btn-x{position:absolute;top:5px;right:5px;width:26px;height:26px;
+  background:rgba(255,255,255,.94);border-color:transparent;box-shadow:var(--sh-s)}
+.evt-photo-plus{display:grid;place-items:center;border:1.5px dashed var(--trait);
+  font-size:.8rem;color:var(--ink-soft);font-weight:500}
+.evt-photo-plus:hover{border-color:var(--leaf);color:var(--forest)}
+.pub-evt{padding:15px 16px}
+.pub-evt-tete{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.pub-evt-auteur{flex:1;display:flex;align-items:center;gap:9px;min-width:0}
+.pub-evt-auteur>span{min-width:0}
+.pub-evt-auteur b{display:block;font-size:.88rem;color:var(--forest)}
+.pub-evt-auteur .tiny{display:block}
+.pub-evt-auteur:hover b{text-decoration:underline}
+.pub-evt-txt{font-size:.92rem;line-height:1.55;color:var(--ink);white-space:pre-line}

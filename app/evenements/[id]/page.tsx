@@ -5,6 +5,7 @@ import { BarreHaut, BarreBas } from '@/components/Navigation';
 import { LIBELLE_TYPE, dateLisible, heureLisible } from '@/components/CarteEvenement';
 import { distanceKm } from '@/lib/utils';
 import Participation from './Participation';
+import Publications, { type Publication } from './Publications';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,8 @@ export default async function PageEvenement({ params }: { params: { id: string }
     .select('profil_id, vient, profil:profils!participations_profil_id_fkey(prenom)')
     .eq('evenement_id', e.id);
 
+  const { data: publications } = await sb.rpc('publications_de', { p_evenement: e.id });
+
   const reponses = participations ?? [];
   const oui = reponses.filter((p: any) => p.vient);
   const nbNon = reponses.length - oui.length;
@@ -39,6 +42,7 @@ export default async function PageEvenement({ params }: { params: { id: string }
 
   const estMien = e.auteur_id === profil.id;
   const passe = new Date(e.debut).getTime() < Date.now();
+  const photos: string[] = e.photos ?? [];
 
   return (
     <>
@@ -77,6 +81,19 @@ export default async function PageEvenement({ params }: { params: { id: string }
           </div>
         )}
 
+        {photos.length > 0 && (
+          <div className="card">
+            <h3>Photos</h3>
+            <div className="evt-photos" style={{ marginTop: 10 }}>
+              {photos.map((url) => (
+                <a className="evt-photo" key={url} href={url} target="_blank" rel="noopener noreferrer">
+                  <img src={url} alt="" loading="lazy" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!passe && !e.annule && (
           <Participation
             evenementId={e.id}
@@ -89,11 +106,28 @@ export default async function PageEvenement({ params }: { params: { id: string }
           />
         )}
 
-        {estMien && (
-          <p className="tiny center" style={{ marginTop: 12 }}>
-            Vous êtes l&apos;organisateur de cet événement.
-          </p>
+        {(estMien || profil.moderateur) && (
+          <div className="card">
+            <h3>{estMien ? 'Vous organisez cet événement' : 'Modération'}</h3>
+            <p className="muted" style={{ marginTop: 7 }}>
+              {estMien
+                ? "Vous pouvez corriger la date, le lieu ou la description, et ajouter des photos avant comme après."
+                : "Vous pouvez corriger cet événement au titre de la modération."}
+            </p>
+            <Link className="btn btn-s" href={`/evenements/${e.id}/modifier`} style={{ marginTop: 14 }}>
+              Modifier l&apos;événement
+            </Link>
+          </div>
         )}
+
+        <Publications
+          evenementId={e.id}
+          publications={(publications ?? []) as Publication[]}
+          commence={passe}
+          connecte
+          profilId={profil.id}
+          moderateur={!!profil.moderateur}
+        />
       </div></div>
       <BarreBas />
     </>
