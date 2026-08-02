@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
-import { Logo } from '@/components/Illustrations';
 import { RAYON_DEFAUT } from '@/lib/utils';
+import { Marque } from './Marque';
 
 const GEO = 'https://geo.api.gouv.fr';
 const COOKIE = 'mpp-secteur';
@@ -66,7 +66,7 @@ export default function ChoixCommune({ communeActuelle }: { communeActuelle?: st
     <div className="onb">
       <div className="onb-in">
         <div className="brand" style={{ fontSize: '1.7rem' }}>
-          <Logo size={29} />mon<i>petit</i>potager
+          <Marque hauteur={64} />
         </div>
         <h1>Que pousse-t-il près de chez vous ?</h1>
         <p className="lede">

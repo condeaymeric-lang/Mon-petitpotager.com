@@ -3,8 +3,8 @@ import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
-import { Logo } from '@/components/Illustrations';
 import { PanneauMarque } from '@/components/PanneauMarque';
+import { Marque } from '@/components/Marque';
 
 function Formulaire() {
   const [email, setEmail] = useState('');
@@ -58,7 +58,7 @@ export default function Connexion() {
       <PanneauMarque />
       <div className="onb-in">
         <Link href="/" className="brand" style={{ fontSize: '1.7rem' }}>
-          <Logo size={29} />mon<i>petit</i>potager
+          <Marque hauteur={64} />
         </Link>
         <h1>Content de vous revoir.</h1>
         <p className="lede">Connectez-vous pour retrouver votre secteur.</p>

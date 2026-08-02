@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { usePanier } from '@/components/PanierContext';
-import { Logo } from '@/components/Illustrations';
+import { Marque } from './Marque';
 
 const ONGLETS = {
   acheter: [
@@ -45,7 +45,7 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
     <div className="topbar">
       <div className="topbar-in">
         <div className="tb-row">
-          <Link href="/" className="brand"><Logo size={25} />mon<i>petit</i>potager</Link>
+          <Link href="/" className="brand"><Marque hauteur={46} /></Link>
 
           <nav className="dsk-nav" aria-label="Navigation principale">
             {[...onglets.filter((o) => o.cle !== 'profil'),

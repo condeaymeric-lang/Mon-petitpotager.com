@@ -62,7 +62,8 @@ img,svg{display:block;max-width:100%}
 .topbar{position:sticky;top:0;z-index:40;background:rgba(247,244,234,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .topbar-in{max-width:900px;margin:0 auto;padding:10px 16px}
 .tb-row{display:flex;align-items:center;gap:10px}
-.brand{display:flex;align-items:center;gap:6px;font-family:'Caveat';font-weight:700;font-size:1.5rem;color:var(--forest);letter-spacing:0;line-height:1}
+.brand{display:flex;align-items:center;gap:6px;line-height:0}
+.brand img{max-width:100%;height:auto}
 .brand i{font-style:normal;color:var(--forest-2)}
 a.brand{transition:opacity .15s}
 a.brand:hover{opacity:.72}
@@ -405,6 +406,8 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 
 /* ── Pied de page ── */
 .pied{border-top:1px solid var(--line);margin-top:36px;padding:22px 16px calc(90px + env(safe-area-inset-bottom))}
+.pied-marque{display:flex;justify-content:center;margin-bottom:20px;transition:opacity .15s}
+.pied-marque:hover{opacity:.72}
 .pied-in{max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px 22px;justify-content:center}
 .pied-in a{font-size:.8rem;color:var(--ink-soft)}
 .pied-in a:hover{color:var(--forest);text-decoration:underline}
@@ -516,6 +519,7 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .lot-l{display:flex;align-items:center;gap:10px;font-size:.9rem}
 .lot-l span:first-child{flex-shrink:0;width:34px;height:34px;border-radius:8px;overflow:hidden}
 .lot-l span:first-child svg{width:100%;height:100%;display:block}
+.lot-l .vari{width:auto;height:auto;font-size:.82rem;color:var(--ink-soft)}
 .lot-l b{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--forest)}
 
 /* Segment à quatre choix : retrait et livraison */
@@ -524,3 +528,14 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 @media(min-width:560px){.seg-4 button{flex:1 1 0}}
 .var-btn:disabled{opacity:.55;cursor:not-allowed}
 .var-btn:disabled:hover{border-color:var(--trait);box-shadow:none}
+
+/* Ligne de composition d'un panier, avec son sélecteur de variété */
+.compo{border:1.5px solid var(--trait);border-radius:var(--r-m);padding:4px 12px 12px;margin-bottom:10px;background:#fff}
+.compo .line{border:0;padding:10px 0}
+.compo-var{border-top:1px dashed var(--trait);padding-top:10px}
+.compo-var-b{display:flex;align-items:center;gap:6px;width:100%;font-size:.85rem;
+  color:var(--ink-soft);text-align:left;min-height:34px}
+.compo-var-b b{color:var(--forest);font-weight:600}
+.compo-var-b svg{margin-left:auto;fill:none;stroke:var(--forest);stroke-width:2.2;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .18s}
+.compo-var-b:hover{color:var(--forest)}

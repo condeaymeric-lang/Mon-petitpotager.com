@@ -6,11 +6,15 @@ import { creerClient } from '@/lib/supabase-client';
 import { useToast } from '@/components/Toast';
 import { Illustration } from '@/components/Illustrations';
 import { eur, estDeSaison } from '@/lib/utils';
-import type { Produit, Profil, Secteur } from '@/lib/types';
+import type { Produit, Variete, Profil, Secteur } from '@/lib/types';
 
 interface Composant {
   produit: Produit;
   quantite: string;
+  variete: Variete | null;
+  varieteLibre: string;
+  /** Le sélecteur de variété n'est déplié que sur demande. */
+  ouvert: boolean;
 }
 
 /**
@@ -19,8 +23,11 @@ interface Composant {
  * référence de chaque composant, donc vérifiable ligne à ligne.
  */
 export default function Composeur({
-  produits, profil, secteur, communes,
-}: { produits: Produit[]; profil: Profil; secteur: Secteur; communes: string[] }) {
+  produits, varietes, profil, secteur, communes,
+}: {
+  produits: Produit[]; varietes: Variete[]; profil: Profil;
+  secteur: Secteur; communes: string[];
+}) {
   const [lignes, setLignes] = useState<Composant[]>([]);
   const [recherche, setRecherche] = useState('');
   const [titre, setTitre] = useState('');
@@ -69,16 +76,23 @@ export default function Composeur({
   }
 
   function ajouter(p: Produit) {
-    setLignes((l) => [...l, { produit: p, quantite: '1' }]);
+    setLignes((l) => [...l, {
+      produit: p, quantite: '1', variete: null, varieteLibre: '', ouvert: false,
+    }]);
     setRecherche('');
+  }
+
+  function majLigne(id: number, champs: Partial<Composant>) {
+    setLignes((l) => l.map((x) => (x.produit.id === id ? { ...x, ...champs } : x)));
+  }
+
+  /** Nom de la variété retenue, du catalogue ou saisie à la main. */
+  function nomVariete(l: Composant) {
+    return l.variete?.nom ?? (l.varieteLibre.trim() || null);
   }
 
   function retirer(id: number) {
     setLignes((l) => l.filter((x) => x.produit.id !== id));
-  }
-
-  function majQuantite(id: number, v: string) {
-    setLignes((l) => l.map((x) => (x.produit.id === id ? { ...x, quantite: v } : x)));
   }
 
   async function publier() {
@@ -124,6 +138,8 @@ export default function Composeur({
       valides.map((l, i) => ({
         annonce_id: annonce.id,
         produit_id: l.produit.id,
+        variete_id: l.variete?.id ?? null,
+        variete_libre: l.variete ? null : (l.varieteLibre.trim() || null),
         quantite: parseFloat(l.quantite.replace(',', '.')),
         unite: l.produit.unite,
         position: i,
@@ -197,8 +213,11 @@ export default function Composeur({
 
         {lignes.length > 0 ? (
           <div style={{ marginTop: 16 }}>
-            {lignes.map((l) => (
-              <div className="line" key={l.produit.id}>
+            {lignes.map((l) => {
+              const sesVarietes = varietes.filter((v) => v.produit_id === l.produit.id);
+              return (
+              <div className="compo" key={l.produit.id}>
+              <div className="line">
                 <div className="th"><Illustration nom={l.produit.illustration} /></div>
                 <div className="line-b">
                   <h4>{l.produit.nom}</h4>
@@ -216,14 +235,62 @@ export default function Composeur({
                   </label>
                   <input className="inp" id={`q-${l.produit.id}`} type="text" inputMode="decimal"
                     value={l.quantite} style={{ width: 66, textAlign: 'right' }}
-                    onChange={(e) => majQuantite(l.produit.id, e.target.value)} />
+                    onChange={(e) => majLigne(l.produit.id, { quantite: e.target.value })} />
                   <span className="tiny">{l.produit.unite}</span>
                   <button type="button" className="btn-x"
                     aria-label={`Retirer ${l.produit.nom} du panier`}
                     onClick={() => retirer(l.produit.id)}>×</button>
                 </div>
               </div>
-            ))}
+
+              <div className="compo-var">
+                <button type="button" className="compo-var-b"
+                  aria-expanded={l.ouvert}
+                  onClick={() => majLigne(l.produit.id, { ouvert: !l.ouvert })}>
+                  {nomVariete(l)
+                    ? <>Variété : <b>{nomVariete(l)}</b></>
+                    : <>Préciser la variété <span className="tiny">(facultatif)</span></>}
+                  <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"
+                    style={{ transform: l.ouvert ? 'rotate(90deg)' : 'none' }}>
+                    <path d="m9 6 6 6-6 6" />
+                  </svg>
+                </button>
+
+                {l.ouvert && (
+                  <>
+                    <div className="var-list" style={{ marginTop: 8 }}>
+                      <button type="button"
+                        className={`var-btn${!l.variete && !l.varieteLibre.trim() ? ' on' : ''}`}
+                        onClick={() => majLigne(l.produit.id, { variete: null, varieteLibre: '' })}>
+                        <div><b>Sans précision</b><span>La variété n&apos;est pas indiquée à l&apos;acheteur.</span></div>
+                      </button>
+                      {sesVarietes.map((v) => (
+                        <button key={v.id} type="button"
+                          className={`var-btn${l.variete?.id === v.id ? ' on' : ''}`}
+                          onClick={() => majLigne(l.produit.id, { variete: v, varieteLibre: '' })}>
+                          <div>
+                            <b>{v.nom}</b>
+                            {v.description && <span>{v.description}</span>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <label htmlFor={`vl-${l.produit.id}`} className="tiny"
+                      style={{ display: 'block', marginTop: 10 }}>
+                      Une autre variété, absente de la liste
+                    </label>
+                    <input className="inp" id={`vl-${l.produit.id}`} type="text" maxLength={60}
+                      value={l.varieteLibre} placeholder="Nom de la variété"
+                      onChange={(e) => majLigne(l.produit.id, {
+                        varieteLibre: e.target.value, variete: null,
+                      })} />
+                  </>
+                )}
+              </div>
+              </div>
+              );
+            })}
           </div>
         ) : (
           <p className="tiny" style={{ marginTop: 12 }}>

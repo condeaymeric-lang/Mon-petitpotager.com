@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Marque } from './Marque';
 
 const LIENS = [
   { href: '/pourquoi', label: "Pourquoi l'application" },
@@ -11,6 +12,9 @@ const LIENS = [
 export default function PiedDePage() {
   return (
     <footer className="pied">
+      <Link href="/" className="pied-marque" aria-label="Retour à l'accueil">
+        <Marque hauteur={78} signature />
+      </Link>
       <nav className="pied-in" aria-label="Liens de bas de page">
         {LIENS.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}
       </nav>

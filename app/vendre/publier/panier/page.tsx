@@ -9,7 +9,7 @@ export default async function PublierPanier() {
   const { profil, secteur } = await profilCourant();
   if (!secteur) redirect('/profil');
 
-  const { produits } = await catalogue();
+  const { produits, varietes } = await catalogue();
 
   return (
     <>
@@ -17,6 +17,7 @@ export default async function PublierPanier() {
       <div className="app has-tabbar">
         <Composeur
           produits={produits}
+          varietes={varietes}
           profil={profil}
           secteur={secteur}
           communes={[secteur.nom]}

@@ -28,7 +28,7 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
   // calculer sa référence grande surface, somme de ses composants.
   const { data: composants } = a.est_lot
     ? await sb.from('composants_lot')
-        .select('id, quantite, unite, produit:produits(nom, prix_ref, illustration)')
+        .select('id, quantite, unite, variete_libre, produit:produits(nom, prix_ref, illustration), variete:varietes(nom, illustration)')
         .eq('annonce_id', a.id)
         .order('position')
     : { data: null };
@@ -99,8 +99,10 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
                 <div className="lot-contenu">
                   {composants.map((c: any) => (
                     <div className="lot-l" key={c.id}>
-                      <span><Illustration nom={c.produit?.illustration} /></span>
+                      <span><Illustration nom={c.variete?.illustration ?? c.produit?.illustration} /></span>
                       {c.produit?.nom}
+                      {(c.variete?.nom ?? c.variete_libre)
+                        && <span className="vari">{c.variete?.nom ?? c.variete_libre}</span>}
                       <b>{(+c.quantite).toLocaleString('fr-FR')} {c.unite}</b>
                     </div>
                   ))}

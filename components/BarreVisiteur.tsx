@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Logo } from '@/components/Illustrations';
+import { Marque } from './Marque';
 
 const COOKIE = 'mpp-secteur';
 
@@ -22,7 +22,7 @@ export default function BarreVisiteur({
     <div className="topbar">
       <div className="topbar-in">
         <div className="tb-row">
-          <Link href="/" className="brand"><Logo size={25} />mon<i>petit</i>potager</Link>
+          <Link href="/" className="brand"><Marque hauteur={46} /></Link>
           <div className="tb-right">
             <nav className="dsk-nav" aria-label="Navigation">
               <Link href="/producteurs">Producteurs</Link>

@@ -4,10 +4,10 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
-import { Logo } from '@/components/Illustrations';
 import { PanneauMarque } from '@/components/PanneauMarque';
 import { SEUIL_OUVERTURE, RAYON_DEFAUT, distanceKm, compresserImage } from '@/lib/utils';
 import type { Role } from '@/lib/types';
+import { Marque } from '@/components/Marque';
 
 const Carte = dynamic(() => import('@/components/Carte'), {
   ssr: false,
@@ -207,7 +207,7 @@ export default function Inscription() {
   if (confirme) {
     return (
       <div className="onb"><PanneauMarque /><div className="onb-in">
-        <Link href="/" className="brand" style={{ fontSize: '1.7rem' }}><Logo size={29} />mon<i>petit</i>potager</Link>
+        <Link href="/" className="brand"><Marque hauteur={58} /></Link>
         <h1>Vérifiez vos e-mails.</h1>
         <p className="lede">Un lien de confirmation a été envoyé à {email}. Cliquez dessus pour activer votre compte.</p>
         <Link href="/connexion" className="btn btn-s">Retour à la connexion</Link>
@@ -217,7 +217,7 @@ export default function Inscription() {
 
   return (
     <div className="onb"><PanneauMarque /><div className="onb-in">
-      <Link href="/" className="brand" style={{ fontSize: '1.7rem' }}><Logo size={29} />mon<i>petit</i>potager</Link>
+      <Link href="/" className="brand"><Marque hauteur={58} /></Link>
 
       {etape === 0 && (<>
         <h1>Où est votre secteur ?</h1>

@@ -1,7 +1,8 @@
 'use client';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { Illustration, Logo } from '@/components/Illustrations';
+import { Illustration } from '@/components/Illustrations';
+import { Marque } from '@/components/Marque';
 
 export default function Erreur({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -12,7 +13,7 @@ export default function Erreur({ error, reset }: { error: Error & { digest?: str
     <div className="onb">
       <div className="onb-in">
         <Link href="/" className="brand" style={{ fontSize: '1.7rem' }}>
-          <Logo size={29} />mon<i>petit</i>potager
+          <Marque hauteur={58} />
         </Link>
         <div className="empty" style={{ marginTop: 24 }}>
           <Illustration nom="plant" className="e-ico" />

@@ -1225,3 +1225,7 @@ end $$ language plpgsql security definer set search_path = public;
 drop trigger if exists trg_composant_lot on composants_lot;
 create trigger trg_composant_lot before insert or update on composants_lot
   for each row execute function verifier_composant_lot();
+
+-- Une variété libre est possible dans un panier, comme dans une annonce
+-- simple : le catalogue ne peut pas tout prévoir.
+alter table composants_lot add column if not exists variete_libre text;
