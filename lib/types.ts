@@ -29,6 +29,7 @@ export interface Profil {
   annee_installation?: number | null;
   surface_ha?: number | null;
   specialites?: string | null;
+  moderateur?: boolean;
   bio: string | null;
   raison_sociale: string | null;
   role: Role;

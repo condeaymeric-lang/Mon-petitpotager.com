@@ -1555,3 +1555,108 @@ returns table (
    order by p.points desc, p.created_at
    limit p_limite;
 $$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  MODÉRATION
+--  Un modérateur peut retirer ou corriger n'importe quelle annonce.
+--  C'est un pouvoir large : chaque intervention est donc journalisée,
+--  avec son motif, et le statut ne s'accorde pas depuis l'interface.
+-- ═══════════════════════════════════════════════════════════════
+alter table profils add column if not exists moderateur boolean default false not null;
+-- Volontairement absent des colonnes modifiables par un membre : nul ne
+-- se nomme modérateur soi-même.
+grant select (moderateur) on profils to anon, authenticated;
+
+create or replace function est_moderateur() returns boolean as $$
+  select coalesce((select moderateur from public.profils where id = auth.uid()), false);
+$$ language sql stable security definer set search_path = public;
+
+-- Les annonces : leur auteur, ou un modérateur.
+drop policy if exists maj_annonce on annonces;
+create policy maj_annonce on annonces for update
+  using (vendeur_id = auth.uid() or est_moderateur());
+drop policy if exists suppression_annonce on annonces;
+create policy suppression_annonce on annonces for delete
+  using (vendeur_id = auth.uid() or est_moderateur());
+
+create table if not exists journal_moderation (
+  id           uuid primary key default uuid_generate_v4(),
+  moderateur_id uuid references profils(id) on delete set null,
+  annonce_id   uuid,
+  titre        text,
+  vendeur_id   uuid,
+  action       text not null,          -- masquee | supprimee | corrigee | retablie
+  motif        text not null,
+  created_at   timestamptz default now()
+);
+create index if not exists idx_journal_mod on journal_moderation (created_at desc);
+
+alter table journal_moderation enable row level security;
+drop policy if exists lecture_journal on journal_moderation;
+create policy lecture_journal on journal_moderation for select using (est_moderateur());
+-- Aucune écriture directe : le journal se remplit par moderer_annonce().
+
+/**
+ * Action de modération sur une annonce, journalisée.
+ * Le motif est obligatoire : une suppression sans raison écrite n'est
+ * pas défendable si l'auteur la conteste.
+ */
+create or replace function moderer_annonce(
+  p_annonce uuid, p_action text, p_motif text
+) returns void as $$
+declare v_a record;
+begin
+  if not est_moderateur() then
+    raise exception 'Action réservée à la modération.' using errcode = 'check_violation';
+  end if;
+  if p_motif is null or length(trim(p_motif)) < 3 then
+    raise exception 'Un motif est obligatoire.' using errcode = 'check_violation';
+  end if;
+  if p_action not in ('masquee', 'supprimee', 'retablie') then
+    raise exception 'Action inconnue.' using errcode = 'check_violation';
+  end if;
+
+  select id, titre, vendeur_id into v_a from public.annonces where id = p_annonce;
+  if v_a.id is null then
+    raise exception 'Annonce introuvable.' using errcode = 'check_violation';
+  end if;
+
+  insert into public.journal_moderation
+    (moderateur_id, annonce_id, titre, vendeur_id, action, motif)
+    values (auth.uid(), v_a.id, v_a.titre, v_a.vendeur_id, p_action, trim(p_motif));
+
+  if p_action = 'supprimee' then
+    delete from public.annonces where id = p_annonce;
+  elsif p_action = 'masquee' then
+    update public.annonces set statut = 'retire', updated_at = now() where id = p_annonce;
+  else
+    update public.annonces set statut = 'en_ligne', updated_at = now() where id = p_annonce;
+  end if;
+end $$ language plpgsql security definer set search_path = public;
+
+/** Toutes les annonces, sans filtre de rayon : la modération doit voir
+ *  ce qui se publie partout, y compris ce qui est déjà retiré. */
+create or replace function annonces_a_moderer(p_recherche text default null, p_limite int default 60)
+returns table (
+  id uuid, titre text, description text, statut text, mode text,
+  prix numeric, unite text, quantite int, commune text, photos text[],
+  est_lot boolean, vendeur_id uuid, vendeur_prenom text, vendeur_role text,
+  illustration text, created_at timestamptz
+) as $$
+  select a.id, a.titre, a.description, a.statut::text, a.mode::text,
+         a.prix, a.unite, a.quantite, a.commune, a.photos,
+         a.est_lot, a.vendeur_id, coalesce(pr.raison_sociale, pr.prenom), pr.role::text,
+         coalesce(v.illustration, p.illustration, case when a.est_lot then 'bocal' end),
+         a.created_at
+    from annonces a
+    join profils pr on pr.id = a.vendeur_id
+    left join produits p on p.id = a.produit_id
+    left join varietes v on v.id = a.variete_id
+   where est_moderateur()
+     and (p_recherche is null or p_recherche = ''
+          or a.titre ilike '%' || p_recherche || '%'
+          or a.commune ilike '%' || p_recherche || '%'
+          or coalesce(pr.raison_sociale, pr.prenom) ilike '%' || p_recherche || '%')
+   order by a.created_at desc
+   limit p_limite;
+$$ language sql stable security definer set search_path = public;

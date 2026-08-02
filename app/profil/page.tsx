@@ -62,6 +62,19 @@ export default async function Profil() {
           </div>
         </div>
 
+        {profil.moderateur && (
+          <div className="card">
+            <h3>Modération</h3>
+            <p className="muted" style={{ marginTop: 7 }}>
+              Vous pouvez retirer, corriger ou supprimer n&apos;importe quelle
+              annonce du site. Chaque intervention est journalisée.
+            </p>
+            <Link className="btn btn-p" href="/moderation" style={{ marginTop: 14 }}>
+              Ouvrir la modération
+            </Link>
+          </div>
+        )}
+
         <BonsAchat points={profil.points} bons={bons ?? []} />
 
         <ModifierProfil profil={profil} />
