@@ -2545,3 +2545,181 @@ returns table (
    order by 6 desc
    limit 12;
 $$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  LA BATAILLE DES VOISINS
+--  Un classement d'activité, et non de points : publier, vendre,
+--  acheter, tenir un relais, organiser, discuter. Les points servent
+--  aux bons d'achat, ils n'ont pas à mesurer qui anime le secteur.
+-- ═══════════════════════════════════════════════════════════════
+create or replace function bataille_voisins(
+  p_lat double precision, p_lon double precision,
+  p_rayon_km int default 20, p_jours int default 90, p_limite int default 10
+)
+returns table (
+  id uuid, prenom text, avatar_url text, role text, est_relais boolean,
+  commune text, nb_annonces int, nb_ventes int, nb_achats int,
+  nb_evenements int, nb_messages int, nb_publications int, score int
+) as $$
+  with periode as (select (now() - (p_jours || ' days')::interval) as debut),
+  gens as (
+    select p.id, coalesce(p.raison_sociale, p.organisation_nom, p.prenom) as nom,
+           p.avatar_url, p.role::text, p.est_relais, s.nom as commune
+      from profils p
+      join secteurs s on s.code_insee = p.secteur
+     where st_dwithin(st_point(s.lon, s.lat)::geography,
+                      st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+  )
+  select g.id, g.nom, g.avatar_url, g.role, g.est_relais, g.commune,
+         a.n, v.n, ac.n, e.n, m.n, pu.n,
+         -- Chaque geste compte, les plus engageants comptent davantage.
+         (a.n * 3 + v.n * 6 + ac.n * 4 + e.n * 8 + m.n + pu.n * 5
+          + case when g.est_relais then 10 else 0 end)::int
+    from gens g, periode pe,
+    lateral (select count(*)::int n from annonces x
+              where x.vendeur_id = g.id and x.created_at > pe.debut) a,
+    lateral (select count(*)::int n from lignes_commande x
+              where x.vendeur_id = g.id and x.verse and x.verse_le > pe.debut) v,
+    lateral (select count(*)::int n from commandes x
+              where x.acheteur_id = g.id and x.statut = 'retiree'
+                and x.retire_le > pe.debut) ac,
+    lateral (select count(*)::int n from evenements x
+              where x.auteur_id = g.id and x.created_at > pe.debut) e,
+    lateral (select count(*)::int n from messages_prives x
+              where x.auteur_id = g.id and x.created_at > pe.debut) m,
+    lateral (select count(*)::int n from publications_officielles x
+              where x.auteur_id = g.id and x.created_at > pe.debut) pu
+   where (a.n + v.n + ac.n + e.n + m.n + pu.n) > 0 or g.est_relais
+   order by 13 desc, g.nom
+   limit p_limite;
+$$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  LE BISTROT DU COIN
+--  Un lieu de discussion par thème : conseils de culture, entraide,
+--  bons plans, ce qui se passe au village. Soumis au rayon comme le
+--  reste : on discute avec ses voisins, pas avec la France entière.
+-- ═══════════════════════════════════════════════════════════════
+create table if not exists sujets (
+  id           uuid primary key default uuid_generate_v4(),
+  auteur_id    uuid references profils(id) on delete cascade not null,
+  secteur      text references secteurs(code_insee) not null,
+  theme        text not null default 'discussion',
+  -- conseils | entraide | bons_plans | vie_locale | recettes | discussion
+  titre        text not null check (length(trim(titre)) between 3 and 160),
+  texte        text not null check (length(trim(texte)) between 3 and 4000),
+  photos       text[] default '{}',
+  epingle      boolean default false not null,
+  ferme        boolean default false not null,
+  dernier_le   timestamptz default now() not null,
+  lat          double precision,
+  lon          double precision,
+  geo          geography(point, 4326),
+  created_at   timestamptz default now()
+);
+create index if not exists idx_sujets_geo on sujets using gist (geo);
+create index if not exists idx_sujets_date on sujets (dernier_le desc);
+
+create table if not exists reponses_sujet (
+  id         uuid primary key default uuid_generate_v4(),
+  sujet_id   uuid references sujets(id) on delete cascade not null,
+  auteur_id  uuid references profils(id) on delete cascade not null,
+  texte      text not null check (length(trim(texte)) between 1 and 3000),
+  photos     text[] default '{}',
+  created_at timestamptz default now()
+);
+create index if not exists idx_reponses_sujet on reponses_sujet (sujet_id, created_at);
+
+create or replace function geo_sujet() returns trigger as $$
+begin
+  if new.lat is null or new.lon is null then
+    select s.lat, s.lon into new.lat, new.lon
+      from public.secteurs s where s.code_insee = new.secteur;
+  end if;
+  new.geo := st_point(new.lon, new.lat)::geography;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_geo_sujet on sujets;
+create trigger trg_geo_sujet before insert or update on sujets
+  for each row execute function geo_sujet();
+
+create or replace function toucher_sujet() returns trigger as $$
+begin
+  update public.sujets set dernier_le = now() where id = new.sujet_id;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_toucher_sujet on reponses_sujet;
+create trigger trg_toucher_sujet after insert on reponses_sujet
+  for each row execute function toucher_sujet();
+
+alter table sujets enable row level security;
+alter table reponses_sujet enable row level security;
+
+drop policy if exists lecture_sujets on sujets;
+create policy lecture_sujets on sujets for select using (true);
+drop policy if exists creation_sujet on sujets;
+create policy creation_sujet on sujets for insert
+  with check (auteur_id = auth.uid() and compte_actif());
+drop policy if exists maj_sujet on sujets;
+create policy maj_sujet on sujets for update
+  using (auteur_id = auth.uid() or est_moderateur());
+drop policy if exists suppr_sujet on sujets;
+create policy suppr_sujet on sujets for delete
+  using (auteur_id = auth.uid() or est_moderateur());
+
+drop policy if exists lecture_reponses on reponses_sujet;
+create policy lecture_reponses on reponses_sujet for select using (true);
+drop policy if exists creation_reponse on reponses_sujet;
+create policy creation_reponse on reponses_sujet for insert
+  with check (auteur_id = auth.uid() and compte_actif()
+    and exists (select 1 from sujets s where s.id = sujet_id and s.ferme = false));
+drop policy if exists maj_reponse on reponses_sujet;
+create policy maj_reponse on reponses_sujet for update using (auteur_id = auth.uid());
+drop policy if exists suppr_reponse on reponses_sujet;
+create policy suppr_reponse on reponses_sujet for delete
+  using (auteur_id = auth.uid() or est_moderateur());
+
+/** Sujets du rayon, du plus vivant au plus ancien. */
+create or replace function sujets_autour(
+  p_lat double precision, p_lon double precision,
+  p_rayon_km int default 20, p_theme text default null, p_limite int default 30
+)
+returns table (
+  id uuid, theme text, titre text, texte text, photos text[],
+  epingle boolean, ferme boolean, dernier_le timestamptz, created_at timestamptz,
+  distance_km numeric, auteur_id uuid, auteur_prenom text, auteur_avatar text,
+  auteur_role text, nb_reponses int, dernier_prenom text
+) as $$
+  select s.id, s.theme, s.titre, s.texte, s.photos,
+         s.epingle, s.ferme, s.dernier_le, s.created_at,
+         round((st_distance(s.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+         pr.id, coalesce(pr.raison_sociale, pr.organisation_nom, pr.prenom), pr.avatar_url,
+         pr.role::text,
+         (select count(*)::int from reponses_sujet r where r.sujet_id = s.id),
+         (select coalesce(p2.raison_sociale, p2.organisation_nom, p2.prenom)
+            from reponses_sujet r join profils p2 on p2.id = r.auteur_id
+           where r.sujet_id = s.id order by r.created_at desc limit 1)
+    from sujets s
+    join profils pr on pr.id = s.auteur_id
+   where st_dwithin(s.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+     and (p_theme is null or s.theme = p_theme)
+   order by s.epingle desc, s.dernier_le desc
+   limit p_limite;
+$$ language sql stable security definer set search_path = public;
+
+/** Réponses d'un sujet, avec leurs auteurs. */
+create or replace function reponses_de(p_sujet uuid)
+returns table (
+  id uuid, texte text, photos text[], created_at timestamptz,
+  auteur_id uuid, auteur_prenom text, auteur_avatar text, auteur_role text
+) as $$
+  select r.id, r.texte, r.photos, r.created_at,
+         pr.id, coalesce(pr.raison_sociale, pr.organisation_nom, pr.prenom),
+         pr.avatar_url, pr.role::text
+    from reponses_sujet r
+    join profils pr on pr.id = r.auteur_id
+   where r.sujet_id = p_sujet
+   order by r.created_at;
+$$ language sql stable security definer set search_path = public;

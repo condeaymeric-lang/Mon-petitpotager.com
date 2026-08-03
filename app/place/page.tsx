@@ -6,6 +6,7 @@ import BarreVisiteur from '@/components/BarreVisiteur';
 import ChoixCommune from '@/components/ChoixCommune';
 import CarteEvenement from '@/components/CarteEvenement';
 import CarteInformation, { type InformationProche } from '@/components/CarteInformation';
+import CarteSujet, { type SujetProche } from '@/components/CarteSujet';
 import { Illustration } from '@/components/Illustrations';
 import type { EvenementProche } from '@/lib/types';
 
@@ -20,7 +21,7 @@ export default async function Place() {
   const { connecte, profil, secteur, rayonKm, sb } = await contexteVisite();
   if (!secteur) return <ChoixCommune />;
 
-  const [infos, evenements, { data: sondages }, { data: structures }] = await Promise.all([
+  const [infos, evenements, { data: sondages }, { data: structures }, { data: sujets }] = await Promise.all([
     informationsAutour(secteur.lat, secteur.lon, rayonKm, 12),
     evenementsAutour(secteur.lat, secteur.lon, rayonKm, 12),
     sb.rpc('sondages_autour', {
@@ -31,6 +32,10 @@ export default async function Place() {
       .not('organisation', 'is', null)
       .eq('organisation_verifiee', true)
       .limit(12),
+    sb.rpc('sujets_autour', {
+      p_lat: secteur.lat, p_lon: secteur.lon, p_rayon_km: rayonKm,
+      p_theme: null, p_limite: 4,
+    }),
   ]);
 
   const publications = infos as InformationProche[];
@@ -39,7 +44,9 @@ export default async function Place() {
   const ouvertes = enquetes.filter((s) => !s.clos_le || new Date(s.clos_le) > new Date());
   const maisons = (structures ?? []).filter((s: any) => s.secteur === secteur.code_insee);
 
-  const vide = publications.length === 0 && agenda.length === 0 && enquetes.length === 0;
+  const discussions = (sujets ?? []) as SujetProche[];
+  const vide = publications.length === 0 && agenda.length === 0
+    && enquetes.length === 0 && discussions.length === 0;
 
   return (
     <>
@@ -68,8 +75,8 @@ export default async function Place() {
             </p>
             {connecte && profil && (
               <div className="row-btn" style={{ marginTop: 4 }}>
-                <Link className="btn btn-p" href="/evenements/nouveau">Proposer un événement</Link>
-                <Link className="btn btn-s" href="/officiel">Je représente une structure</Link>
+                <Link className="btn btn-p" href="/bistrot/nouveau">Ouvrir une discussion</Link>
+                <Link className="btn btn-s" href="/evenements/nouveau">Proposer un événement</Link>
               </div>
             )}
           </div>
@@ -97,6 +104,18 @@ export default async function Place() {
                       </div>
                     </Link>
                   ))}
+                </div>
+              </section>
+            )}
+
+            {discussions.length > 0 && (
+              <section className="bloc" aria-labelledby="p-bistrot">
+                <div className="bloc-head">
+                  <h2 id="p-bistrot">Le bistrot du coin</h2>
+                  <Link href="/bistrot" className="tiny">Toutes les discussions</Link>
+                </div>
+                <div className="sujets">
+                  {discussions.map((d) => <CarteSujet key={d.id} sujet={d} />)}
                 </div>
               </section>
             )}
@@ -158,11 +177,11 @@ export default async function Place() {
 
         {connecte && profil && !vide && (
           <div className="row-btn" style={{ marginTop: 20 }}>
-            <Link className="btn btn-p" style={{ flex: 1 }} href="/evenements/nouveau">
-              Proposer un événement
+            <Link className="btn btn-p" style={{ flex: 1 }} href="/bistrot/nouveau">
+              Ouvrir une discussion
             </Link>
-            <Link className="btn btn-s" style={{ flex: 1 }} href="/officiel">
-              Espace des structures
+            <Link className="btn btn-s" style={{ flex: 1 }} href="/evenements/nouveau">
+              Proposer un événement
             </Link>
           </div>
         )}

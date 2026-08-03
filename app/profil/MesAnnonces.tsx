@@ -105,6 +105,8 @@ export function Raccourcis({
       d: 'M18.5 6.5a7 7 0 1 0 0 11M4 10.5h11M4 14h9.5' },
     { href: '/messages', label: 'Messages', badge: nbNonLus,
       d: 'M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4.2-1L3 20l1.1-4.1A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z' },
+    { href: '/bistrot', label: 'Le bistrot',
+      d: 'M6 2h12l-1 9a5 5 0 0 1-10 0ZM8 21h8M12 16v5' },
     { href: '/place', label: 'La place',
       d: 'M3 21h18M6 21V11M18 21V11M4 11h16l-8-6-8 6ZM10 21v-5h4v5' },
     ...(organisation ? [{ href: '/officiel', label: 'Ma structure',

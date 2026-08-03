@@ -5,26 +5,45 @@ export interface Voisin {
   prenom: string;
   avatar_url: string | null;
   role: string;
-  points: number;
   est_relais: boolean;
-  nb_annonces: number;
   commune: string;
+  nb_annonces: number;
+  nb_ventes: number;
+  nb_achats: number;
+  nb_evenements: number;
+  nb_messages: number;
+  nb_publications: number;
+  score: number;
+}
+
+/** Le titre du moment, pour ne pas se prendre trop au sérieux. */
+function titre(v: Voisin, rang: number) {
+  if (rang === 0) return 'Chef de village';
+  if (v.est_relais) return 'Gardien du colis';
+  if (v.nb_evenements > 0) return 'Boute-en-train';
+  if (v.nb_ventes >= 3) return 'Marchand du coin';
+  if (v.nb_annonces >= 3) return 'Semeur en série';
+  if (v.nb_messages >= 10) return 'Grande langue';
+  if (v.nb_achats > 0) return 'Bon client';
+  return 'Voisin discret';
 }
 
 /**
- * Classement des voisins les plus actifs du secteur.
+ * La bataille des voisins : un classement d'activité, pas de fortune.
  *
- * Il s'appuie sur les points, donc sur les achats retirés et les colis
- * remis en point relais : publier ne suffit pas à monter, il faut que
- * des échanges aient réellement eu lieu.
+ * Les points servent aux bons d'achat ; ils n'ont pas à dire qui fait
+ * vivre le secteur. Ici comptent les annonces, les ventes, les achats
+ * retirés, les événements organisés, les messages échangés, et le fait
+ * de tenir un point relais.
  */
 export function Classement({ voisins, compact = false }: { voisins: Voisin[]; compact?: boolean }) {
   if (voisins.length === 0) {
     return (
       <div className={compact ? 'classement' : 'card classement'}>
-        <h3>Voisins les plus actifs</h3>
+        <h3>La bataille des voisins</h3>
         <p className="tiny" style={{ marginTop: 8 }}>
-          Le classement apparaîtra dès les premiers échanges du secteur.
+          Personne n&apos;est encore monté sur le ring. Publiez, échangez,
+          organisez : le classement se remplira tout seul.
         </p>
       </div>
     );
@@ -32,7 +51,7 @@ export function Classement({ voisins, compact = false }: { voisins: Voisin[]; co
 
   return (
     <div className={compact ? 'classement' : 'card classement'}>
-      <h3>Voisins les plus actifs</h3>
+      <h3>La bataille des voisins</h3>
       <ol className="clst">
         {voisins.map((v, i) => (
           <li key={v.id}>
@@ -44,20 +63,21 @@ export function Classement({ voisins, compact = false }: { voisins: Voisin[]; co
               <span className="clst-nom">
                 <b>{v.prenom}</b>
                 <span>
-                  {v.role === 'pro' ? 'Producteur' : 'Voisin'}
-                  {v.est_relais ? ' · point relais' : ''}
+                  {titre(v, i)}
                   {!compact && v.nb_annonces > 0
                     ? ` · ${v.nb_annonces} annonce${v.nb_annonces > 1 ? 's' : ''}` : ''}
+                  {!compact && v.nb_evenements > 0
+                    ? ` · ${v.nb_evenements} événement${v.nb_evenements > 1 ? 's' : ''}` : ''}
                 </span>
               </span>
-              <span className="clst-pts">{v.points}<i>pts</i></span>
+              <span className="clst-pts">{v.score}<i>pts</i></span>
             </Link>
           </li>
         ))}
       </ol>
       <p className="tiny clst-note">
-        Les points s&apos;obtiennent sur les achats retirés et les colis remis
-        en point relais.
+        Classement d&apos;activité sur trois mois : annonces, ventes, achats
+        retirés, événements, messages. Sans conséquence, sinon la gloire.
       </p>
     </div>
   );
