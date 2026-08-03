@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -28,10 +29,12 @@ export default function Tiroir({
   groupes, prenom, avatar,
 }: { groupes: Groupe[]; prenom?: string; avatar?: string | null }) {
   const [ouvert, setOuvert] = useState(false);
+  const [monte, setMonte] = useState(false);
   const path = usePathname();
   const panneau = useRef<HTMLDivElement>(null);
   const bouton = useRef<HTMLButtonElement>(null);
 
+  useEffect(() => { setMonte(true); }, []);
   useEffect(() => { setOuvert(false); }, [path]);
 
   useEffect(() => {
@@ -68,7 +71,7 @@ export default function Tiroir({
         </svg>
       </button>
 
-      {ouvert && (
+      {ouvert && monte && createPortal(
         <>
           <div className="tiroir-voile" onClick={() => setOuvert(false)} aria-hidden="true" />
           <div className="tiroir" id="tiroir" ref={panneau}
@@ -113,7 +116,11 @@ export default function Tiroir({
               ))}
             </nav>
           </div>
-        </>
+        </>,
+        // La barre du haut porte un backdrop-filter, qui piège les
+        // éléments en position fixe à l'intérieur d'elle. Le tiroir est
+        // donc rendu directement dans le corps de la page.
+        document.body
       )}
     </>
   );

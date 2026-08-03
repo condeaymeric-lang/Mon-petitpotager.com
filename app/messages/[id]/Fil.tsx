@@ -1,14 +1,21 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { creerClient } from '@/lib/supabase-client';
 import { useToast } from '@/components/Toast';
 import { eur } from '@/lib/utils';
 
+export interface AnnonceDuVendeur {
+  id: string; titre: string; variete: string | null;
+  prix: number; unite: string; mode: string;
+}
+
 export interface MessagePrive {
   id: string;
   auteur_id: string;
   texte: string;
+  annonce_id: string | null;
   prix_propose: number | null;
   remis_le: string | null;
   lu_le: string | null;
@@ -42,15 +49,16 @@ function jour(iso: string) {
  * cela ne rapporte.
  */
 export default function Fil({
-  conversationId, messages: initiaux, moiId, autrePrenom, prixAnnonce,
+  conversationId, messages: initiaux, moiId, autrePrenom, annonces, annonceInitiale,
 }: {
   conversationId: string; messages: MessagePrive[]; moiId: string;
-  autrePrenom: string; prixAnnonce: number | null;
+  autrePrenom: string; annonces: AnnonceDuVendeur[]; annonceInitiale?: string;
 }) {
   const [messages, setMessages] = useState(initiaux);
   const [texte, setTexte] = useState('');
   const [prix, setPrix] = useState('');
   const [proposePrix, setProposePrix] = useState(false);
+  const [annonceId, setAnnonceId] = useState(annonceInitiale ?? '');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
   const bas = useRef<HTMLDivElement>(null);
@@ -65,7 +73,7 @@ export default function Fil({
     const sb = creerClient();
     const t = setInterval(async () => {
       const { data } = await sb.from('messages_prives')
-        .select('id, auteur_id, texte, prix_propose, remis_le, lu_le, created_at')
+        .select('id, auteur_id, texte, annonce_id, prix_propose, remis_le, lu_le, created_at')
         .eq('conversation_id', conversationId)
         .order('created_at');
       if (!data) return;
@@ -92,8 +100,9 @@ export default function Fil({
     const sb = creerClient();
     const { data, error } = await sb.from('messages_prives').insert({
       conversation_id: conversationId, auteur_id: moiId, texte: t,
+      annonce_id: annonceId || null,
       prix_propose: proposePrix ? p : null,
-    }).select('id, auteur_id, texte, prix_propose, remis_le, lu_le, created_at').single();
+    }).select('id, auteur_id, texte, annonce_id, prix_propose, remis_le, lu_le, created_at').single();
 
     setEnvoi(false);
     if (error || !data) { setErreur("Le message n'est pas parti. Réessayez."); return; }
@@ -123,6 +132,11 @@ export default function Fil({
             <div key={m.id}>
               {nouveauJour && <p className="fil-jour">{j}</p>}
               <div className={`bulle${mien ? ' bulle-moi' : ''}`}>
+                {m.annonce_id && (
+                  <Link href={`/annonce/${m.annonce_id}`} className="bulle-prod">
+                    {annonces.find((a) => a.id === m.annonce_id)?.titre ?? 'Une annonce'}
+                  </Link>
+                )}
                 {m.prix_propose != null && (
                   <span className="bulle-prix">Proposition : {eur(+m.prix_propose)}</span>
                 )}
@@ -156,6 +170,22 @@ export default function Fil({
       )}
 
       <div className="card fil-saisie">
+        {annonces.length > 0 && (
+          <div className="field" style={{ marginBottom: 8 }}>
+            <label htmlFor="prod-msg">De quel produit parlez-vous ?</label>
+            <select className="inp" id="prod-msg" value={annonceId}
+              onChange={(e) => setAnnonceId(e.target.value)}>
+              <option value="">Aucun produit en particulier</option>
+              {annonces.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.titre}{a.variete ? ` — ${a.variete}` : ''}
+                  {a.mode === 'vente' ? ` · ${a.prix.toFixed(2).replace('.', ',')} € / ${a.unite}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="field" style={{ marginBottom: 8 }}>
           <label htmlFor="msg" className="sr-only">Votre message à {autrePrenom}</label>
           <textarea className="inp" id="msg" rows={2} maxLength={2000} value={texte}
@@ -166,7 +196,9 @@ export default function Fil({
           <div className="field" style={{ marginBottom: 8 }}>
             <label htmlFor="px">Prix proposé</label>
             <input className="inp" id="px" inputMode="decimal" value={prix} autoFocus
-              placeholder={prixAnnonce ? String(prixAnnonce).replace('.', ',') : '0,00'}
+              placeholder={annonces.find((a) => a.id === annonceId)?.prix
+                ? String(annonces.find((a) => a.id === annonceId)!.prix).replace('.', ',')
+                : '0,00'}
               onChange={(e) => setPrix(e.target.value)} />
             <p className="help">
               Une proposition n&apos;engage rien : elle rend seulement la

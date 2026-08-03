@@ -31,7 +31,7 @@ export default function BoutonEcrire({
         : "La discussion n'a pas pu être ouverte.");
       return;
     }
-    router.push(`/messages/${data}`);
+    router.push(annonceId ? `/messages/${data}?annonce=${annonceId}` : `/messages/${data}`);
   }
 
   return (

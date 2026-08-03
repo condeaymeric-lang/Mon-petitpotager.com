@@ -2822,3 +2822,91 @@ returns table (
    where c.cible_type = p_type and c.cible_id = p_id
    order by coalesce(c.parent_id, c.id), c.created_at;
 $$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  UNE SEULE CONVERSATION PAR PERSONNE
+--  Rattacher le fil à une annonce créait un fil par produit : on se
+--  retrouvait avec trois discussions avec le même voisin. Le produit
+--  descend au niveau du message, où il a sa place : on parle d'un
+--  produit dans un message, pas dans une relation.
+-- ═══════════════════════════════════════════════════════════════
+alter table messages_prives add column if not exists annonce_id uuid
+  references annonces(id) on delete set null;
+
+-- Fusion des fils en double : tout remonte dans le plus ancien.
+do $$
+declare v record;
+begin
+  for v in
+    select membre_min, membre_max, min(created_at) as debut
+      from conversations group by membre_min, membre_max having count(*) > 1
+  loop
+    update messages_prives m
+       set conversation_id = (select id from conversations c
+                               where c.membre_min = v.membre_min
+                                 and c.membre_max = v.membre_max
+                                 and c.created_at = v.debut limit 1),
+           annonce_id = coalesce(m.annonce_id,
+             (select c.annonce_id from conversations c where c.id = m.conversation_id))
+     where m.conversation_id in (select id from conversations c
+                                  where c.membre_min = v.membre_min
+                                    and c.membre_max = v.membre_max
+                                    and c.created_at <> v.debut);
+
+    delete from conversations c
+     where c.membre_min = v.membre_min and c.membre_max = v.membre_max
+       and c.created_at <> v.debut;
+  end loop;
+end $$;
+
+drop index if exists idx_conv_unique;
+create unique index if not exists idx_conv_paire on conversations (membre_min, membre_max);
+
+/** Ouvre le fil avec ce voisin, ou retrouve celui qui existe déjà. */
+create or replace function ouvrir_conversation(p_destinataire uuid, p_annonce uuid default null)
+returns uuid as $$
+declare
+  v_moi uuid := auth.uid();
+  v_min uuid; v_max uuid; v_conv uuid; v_km numeric;
+begin
+  if v_moi is null then
+    raise exception 'Connexion requise.' using errcode = 'check_violation';
+  end if;
+  if p_destinataire = v_moi then
+    raise exception 'On ne s''écrit pas à soi-même.' using errcode = 'check_violation';
+  end if;
+
+  select round((st_distance(sa.geo_pt, sb.geo_pt) / 1000)::numeric, 1) into v_km
+    from (select st_point(s.lon, s.lat)::geography as geo_pt
+            from profils p join secteurs s on s.code_insee = p.secteur
+           where p.id = v_moi) sa,
+         (select st_point(s.lon, s.lat)::geography as geo_pt
+            from profils p join secteurs s on s.code_insee = p.secteur
+           where p.id = p_destinataire) sb;
+
+  if v_km is null or v_km > (select rayon_km from profils where id = v_moi) then
+    raise exception 'Ce membre est hors de votre rayon.' using errcode = 'check_violation';
+  end if;
+
+  v_min := least(v_moi, p_destinataire);
+  v_max := greatest(v_moi, p_destinataire);
+
+  select id into v_conv from conversations
+   where membre_min = v_min and membre_max = v_max;
+  if v_conv is not null then return v_conv; end if;
+
+  insert into conversations (membre_min, membre_max) values (v_min, v_max)
+    returning id into v_conv;
+  return v_conv;
+end $$ language plpgsql security definer set search_path = public;
+
+/** Annonces en ligne d'un membre, pour le sélecteur de la messagerie. */
+create or replace function annonces_du_membre(p_membre uuid)
+returns table (id uuid, titre text, variete text, prix numeric, unite text, mode text) as $$
+  select a.id, a.titre, coalesce(v.nom, a.variete_libre), a.prix, a.unite, a.mode::text
+    from annonces a
+    left join varietes v on v.id = a.variete_id
+   where a.vendeur_id = p_membre and a.statut = 'en_ligne' and a.quantite > 0
+   order by a.created_at desc
+   limit 40;
+$$ language sql stable security definer set search_path = public;

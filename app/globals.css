@@ -1025,3 +1025,8 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
   place-items:center}
 /* Sur iOS, la barre du bas doit rester au-dessus de la zone gestuelle. */
 .tabbar{padding-bottom:env(safe-area-inset-bottom)}
+/* Produit rattaché à un message */
+.bulle-prod{display:block;margin-bottom:6px;padding:5px 10px;border-radius:var(--r-s);
+  background:var(--cream);font-size:.78rem;font-weight:600;color:var(--forest)}
+.bulle-prod:hover{text-decoration:underline}
+.bulle-moi .bulle-prod{background:rgba(255,255,255,.75)}

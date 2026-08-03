@@ -3,11 +3,13 @@ import { notFound } from 'next/navigation';
 import { profilCourant } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import { eur } from '@/lib/utils';
-import Fil, { type MessagePrive } from './Fil';
+import Fil, { type MessagePrive, type AnnonceDuVendeur } from './Fil';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PageFil({ params }: { params: { id: string } }) {
+export default async function PageFil({
+  params, searchParams,
+}: { params: { id: string }; searchParams: { annonce?: string } }) {
   const { profil, secteur, sb } = await profilCourant();
 
   // La politique d'accès filtre déjà : une conversation qui n'est pas la
@@ -22,14 +24,15 @@ export default async function PageFil({ params }: { params: { id: string } }) {
 
   const autreId = conv.membre_min === profil.id ? conv.membre_max : conv.membre_min;
 
-  const [{ data: autre }, { data: messages }, { data: annonce }] = await Promise.all([
+  const [{ data: autre }, { data: messages }, { data: annonce }, { data: sesAnnonces }] = await Promise.all([
     sb.from('profils').select('id, prenom, raison_sociale, avatar_url, role').eq('id', autreId).maybeSingle(),
     sb.from('messages_prives')
-      .select('id, auteur_id, texte, prix_propose, remis_le, lu_le, created_at')
+      .select('id, auteur_id, texte, annonce_id, prix_propose, remis_le, lu_le, created_at')
       .eq('conversation_id', conv.id).order('created_at'),
     conv.annonce_id
       ? sb.from('annonces').select('id, titre, prix, unite, mode, statut').eq('id', conv.annonce_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    sb.rpc('annonces_du_membre', { p_membre: autreId }),
   ]);
 
   await sb.rpc('marquer_lus', { p_conversation: conv.id });
@@ -71,7 +74,8 @@ export default async function PageFil({ params }: { params: { id: string } }) {
           messages={(messages ?? []) as MessagePrive[]}
           moiId={profil.id}
           autrePrenom={nom}
-          prixAnnonce={annonce?.mode === 'vente' ? annonce.prix : null}
+          annonces={(sesAnnonces ?? []) as AnnonceDuVendeur[]}
+          annonceInitiale={searchParams?.annonce}
         />
 
         <p className="tiny center" style={{ marginTop: 12 }}>
