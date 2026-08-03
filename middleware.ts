@@ -30,7 +30,11 @@ export async function middleware(request: NextRequest) {
   const publiques = [
     '/connexion', '/inscription', '/pourquoi', '/auth',
     '/cgu', '/confidentialite', '/mentions-legales', '/contact',
-    '/annonce', '/producteurs', '/evenements',
+    '/annonce', '/producteurs', '/evenements', '/membre',
+    // Les informations des mairies et les sondages se consultent sans
+    // compte : c'est de l'information publique. Voter, en revanche,
+    // demande un compte, et la page le dit.
+    '/informations', '/sondages',
   ];
   const estAccueil = path === '/';
   const estPublique = publiques.some((p) => path.startsWith(p));
