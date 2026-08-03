@@ -61,7 +61,7 @@ img,svg{display:block;max-width:100%}
 
 .topbar{position:sticky;top:0;z-index:40;background:rgba(247,244,234,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .topbar-in{max-width:900px;margin:0 auto;padding:10px 16px}
-.tb-row{display:flex;align-items:center;gap:10px}
+.tb-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:6px;line-height:0;flex-shrink:0}
 .brand img{max-width:100%;height:auto}
 .brand i{font-style:normal;color:var(--forest-2)}
@@ -399,9 +399,10 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .pliste:not(.pcat .pliste){border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
 
 /* ── Mise en avant ── */
-.sponso{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
-.sponso::-webkit-scrollbar{display:none}
-.sponso .item{flex:0 0 168px}
+/* Une rangée qui défile laissait toujours une carte à moitié visible.
+   Elle passe à la ligne : tout est lisible, rien n'est coupé. */
+.sponso{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
+
 .b-spons{background:var(--bark);color:#fff}
 
 .surtitre{display:block;font-size:.7rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--forest-2);margin-bottom:6px}
@@ -444,10 +445,15 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
   /* La barre porte le logo, les rubriques, le bouton de publication, le
      secteur et le profil : c'est la rangée de rubriques qui cède, jamais
      le logo, qui reste le retour à l'accueil. */
-  .dsk-nav{display:flex;align-items:center;gap:4px;flex-shrink:1;min-width:0;
-    overflow-x:auto;scrollbar-width:none}
-  .dsk-nav::-webkit-scrollbar{display:none}
+  /* Rien n'est masqué ni coupé : si la rangée ne tient pas, elle passe
+     à la ligne. Un onglet à moitié visible vaut moins qu'une barre sur
+     deux lignes. */
+  .dsk-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap;
+    order:3;flex-basis:100%}
   .dsk-nav>a,.dsk-nav .menu-v{flex-shrink:0}
+  @media(min-width:1320px){
+    .dsk-nav{order:0;flex-basis:auto}
+  }
   .dsk-nav a{display:flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;font-size:.87rem;font-weight:600;color:var(--ink-soft);position:relative;transition:.15s;white-space:nowrap}
   .dsk-nav a svg{stroke:var(--ink-soft);stroke-width:1.9;fill:none}
   .dsk-nav a:hover{background:var(--leaf-soft);color:var(--forest)}
