@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePanier } from '@/components/PanierContext';
 import { creerClient } from '@/lib/supabase-client';
 import { Marque } from './Marque';
+import Tiroir from './Tiroir';
 
 const ONGLETS = {
   acheter: [
@@ -169,10 +170,58 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
   const publier = modeVendre ? '/vendre/publier' : '/vendre';
   const surProfil = path.startsWith('/profil');
 
+  // Tout ce que la barre du bas ne porte pas se retrouve dans le tiroir.
+  const groupes = [
+    {
+      titre: 'Autour de moi',
+      entrees: [
+        { href: '/', label: 'Accueil', d: 'M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z' },
+        ...VILLAGE.map((v) => ({ href: v.href, label: v.label, d: v.d })),
+      ],
+    },
+    {
+      titre: 'Mes échanges',
+      entrees: [
+        { href: '/notifications', label: 'Notifications', badge: nonLus,
+          d: 'M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0' },
+        { href: '/messages', label: 'Messages',
+          d: 'M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4.2-1L3 20l1.1-4.1A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z' },
+        { href: '/commandes', label: 'Mes achats',
+          d: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0' },
+        { href: '/panier', label: 'Mon panier', badge: nbArticles,
+          d: 'M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6' },
+      ],
+    },
+    {
+      titre: 'Je vends',
+      entrees: [
+        { href: '/vendre', label: 'Mon tableau de bord', d: 'M3 3v18h18M7 15l4-5 3 3 5-7' },
+        ...BOUTIQUE.map((b) => ({ href: b.href, label: b.label, d: b.d })),
+        { href: '/vendre/commandes', label: 'Mes commandes reçues',
+          d: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0' },
+        { href: '/vendre/gestion', label: 'Gestion de l\u2019exploitation',
+          d: 'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4M9 3v4h6V3M8 12h8M8 16h5' },
+      ],
+    },
+    {
+      titre: 'Mon compte',
+      entrees: [
+        { href: '/profil', label: 'Mon profil',
+          d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8' },
+        { href: '/officiel', label: 'Ma structure',
+          d: 'M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6' },
+        { href: '/contact', label: 'Nous écrire',
+          d: 'M4 4h16v16H4zM4 7l8 6 8-6' },
+      ],
+    },
+  ];
+
   return (
     <div className="topbar">
       <div className="topbar-in">
         <div className="tb-row">
+          <Tiroir groupes={groupes} prenom={moi?.prenom} avatar={moi?.avatar} />
+
           <Link href="/" className="brand"><Marque hauteur={46} /></Link>
 
           <nav className="dsk-nav" aria-label="Navigation principale">

@@ -981,3 +981,47 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 /* Garde-fou : aucune image de contenu ne dépasse de son conteneur,
    quelle que soit sa taille d'origine. */
 .sujet img,.comm img,.ntf img,.fil img,.clst img{max-width:100%}
+
+/* ── Tiroir des rubriques, sur téléphone et tablette ── */
+.tiroir-b{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;
+  border:1px solid var(--line);background:var(--paper);flex-shrink:0}
+.tiroir-b svg{stroke:var(--forest);stroke-width:2;fill:none;stroke-linecap:round}
+.tiroir-b:hover{background:var(--leaf-soft);border-color:var(--leaf-line)}
+@media(min-width:760px){.tiroir-b{display:none}}
+.tiroir-voile{position:fixed;inset:0;z-index:80;background:rgba(20,37,26,.5);
+  backdrop-filter:blur(2px);animation:voile .18s ease-out}
+@keyframes voile{from{opacity:0}to{opacity:1}}
+.tiroir{position:fixed;top:0;bottom:0;left:0;z-index:81;width:min(316px,86vw);
+  background:var(--cream);box-shadow:6px 0 32px rgba(20,37,26,.22);
+  display:flex;flex-direction:column;animation:glisse .22s ease-out;
+  padding-top:env(safe-area-inset-top);padding-left:env(safe-area-inset-left)}
+@keyframes glisse{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.tiroir-tete{display:flex;align-items:center;gap:10px;padding:14px 14px 12px;
+  border-bottom:1px solid var(--line);background:var(--paper)}
+.tiroir-moi{flex:1;display:flex;align-items:center;gap:11px;min-width:0;min-height:44px}
+.tiroir-moi>span{min-width:0}
+.tiroir-moi b{display:block;font-size:.96rem;color:var(--forest);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tiroir-moi .tiny{display:block}
+.tiroir-avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.tiroir-avatar-vide{display:grid;place-items:center;background:var(--leaf-soft);
+  color:var(--forest);font-weight:700;font-size:1.05rem}
+.tiroir-nav{flex:1;overflow-y:auto;overscroll-behavior:contain;
+  padding:8px 10px calc(20px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling:touch}
+.tiroir-g+.tiroir-g{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.tiroir-t{font-size:.7rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;
+  letter-spacing:.06em;padding:0 8px 6px}
+.tiroir-nav a{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 10px;
+  border-radius:var(--r-s);font-size:.92rem;font-weight:500;color:var(--ink)}
+.tiroir-nav a svg{stroke:var(--ink-soft);stroke-width:1.8;fill:none;flex-shrink:0;
+  stroke-linecap:round;stroke-linejoin:round}
+.tiroir-nav a:hover{background:var(--leaf-soft)}
+.tiroir-nav a.on{background:var(--paper);color:var(--forest);font-weight:600;
+  box-shadow:inset 0 0 0 1.5px var(--leaf-line)}
+.tiroir-nav a.on svg{stroke:var(--forest)}
+.tiroir-badge{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:10px;
+  background:var(--tomato);color:#fff;font-size:.7rem;font-weight:700;display:grid;
+  place-items:center}
+/* Sur iOS, la barre du bas doit rester au-dessus de la zone gestuelle. */
+.tabbar{padding-bottom:env(safe-area-inset-bottom)}

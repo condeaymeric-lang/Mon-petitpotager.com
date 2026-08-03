@@ -16,15 +16,31 @@ export interface Voisin {
   score: number;
 }
 
-/** Le titre du moment, pour ne pas se prendre trop au sérieux. */
+/**
+ * Le titre du moment, un par place, tous différents.
+ * On ne se prend pas au sérieux, mais on ne se moque de personne :
+ * chaque titre reste flatteur, y compris le dixième.
+ */
+const TITRES = [
+  'Chef de village',
+  'Bras droit du chef',
+  'Pilier du bistrot',
+  'Grande main verte',
+  'Champion du cageot',
+  'Virtuose de l\u2019arrosoir',
+  'Sentinelle du poulailler',
+  'As de la brouette',
+  'Espoir du potager',
+  'Graine de champion',
+];
+
 function titre(v: Voisin, rang: number) {
-  if (rang === 0) return 'Chef de village';
+  if (rang < TITRES.length) return TITRES[rang];
   if (v.est_relais) return 'Gardien du colis';
   if (v.nb_evenements > 0) return 'Boute-en-train';
   if (v.nb_ventes >= 3) return 'Marchand du coin';
   if (v.nb_annonces >= 3) return 'Semeur en série';
   if (v.nb_messages >= 10) return 'Grande langue';
-  if (v.nb_achats > 0) return 'Bon client';
   return 'Voisin discret';
 }
 

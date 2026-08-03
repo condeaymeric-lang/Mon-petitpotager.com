@@ -5,6 +5,7 @@ import { BarreHaut, BarreBas } from '@/components/Navigation';
 import { Illustration } from '@/components/Illustrations';
 import { FicheDetails } from '@/components/FicheDetails';
 import { eur, distanceKm } from '@/lib/utils';
+import BoutonEcrire from '@/components/BoutonEcrire';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +71,13 @@ export default async function FicheProducteur({ params }: { params: { id: string
               || "Ce producteur n'a pas encore rédigé sa présentation."}
           </p>
         </div>
+
+        {profil && profil.id !== p.id && (
+          <div style={{ margin: '0 0 10px' }}>
+            <BoutonEcrire destinataireId={p.id}
+              libelle={`Écrire à ${p.raison_sociale || p.prenom}`} variante="btn-p" />
+          </div>
+        )}
 
         <FicheDetails p={p} />
 
