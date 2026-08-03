@@ -46,8 +46,15 @@ function useNonLus() {
 
   useEffect(() => {
     let vivant = true;
-    creerClient().rpc('messages_non_lus').then(({ data }) => {
-      if (vivant) setN(typeof data === 'number' ? data : 0);
+    const sb = creerClient();
+    Promise.all([
+      sb.rpc('messages_non_lus'),
+      sb.rpc('notifications_non_lues'),
+    ]).then(([m, n2]) => {
+      if (!vivant) return;
+      const a = typeof m.data === 'number' ? m.data : 0;
+      const b = typeof n2.data === 'number' ? n2.data : 0;
+      setN(a + b);
     });
     return () => { vivant = false; };
   }, [path]);

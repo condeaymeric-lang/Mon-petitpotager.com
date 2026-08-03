@@ -60,6 +60,7 @@ export default async function Profil() {
         <Raccourcis
           estPro={profil.role === 'pro'}
           moderateur={!!profil.moderateur}
+          organisation={!!profil.organisation}
           nbNonLus={typeof nonLus === 'number' ? nonLus : 0}
         />
 

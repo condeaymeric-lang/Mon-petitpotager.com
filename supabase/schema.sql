@@ -1890,3 +1890,351 @@ end $$ language plpgsql security definer set search_path = public;
 drop trigger if exists trg_toucher_conv on messages_prives;
 create trigger trg_toucher_conv after insert on messages_prives
   for each row execute function toucher_conversation();
+
+-- ═══════════════════════════════════════════════════════════════
+--  COMPTES D'ORGANISATION
+--  Mairies et associations publient des informations à leur secteur
+--  et consultent les habitants. Le statut est déclaratif à
+--  l'inscription mais affiché comme non vérifié tant que la
+--  modération ne l'a pas confirmé : se faire passer pour une mairie
+--  ne doit pas être gratuit.
+-- ═══════════════════════════════════════════════════════════════
+alter table profils add column if not exists organisation text
+  check (organisation is null or organisation in ('mairie', 'association', 'collectif'));
+alter table profils add column if not exists organisation_nom text;
+alter table profils add column if not exists organisation_verifiee boolean default false not null;
+
+grant select (organisation, organisation_nom, organisation_verifiee)
+  on profils to anon, authenticated;
+-- Le nom et le type se déclarent ; la vérification, non.
+grant update (organisation, organisation_nom) on profils to authenticated;
+
+create or replace function est_organisation(p_profil uuid default null) returns boolean as $$
+  select coalesce((select organisation is not null from public.profils
+                    where id = coalesce(p_profil, auth.uid())), false);
+$$ language sql stable security definer set search_path = public;
+
+-- ── Publications officielles ──
+create table if not exists publications_officielles (
+  id          uuid primary key default uuid_generate_v4(),
+  auteur_id   uuid references profils(id) on delete cascade not null,
+  secteur     text references secteurs(code_insee) not null,
+  categorie   text not null default 'information',
+  -- information | alerte | travaux | evenement | consultation | rappel
+  titre       text not null check (length(trim(titre)) between 3 and 140),
+  texte       text not null check (length(trim(texte)) between 3 and 4000),
+  photos      text[] default '{}',
+  lien        text,
+  epinglee    boolean default false not null,
+  expire_le   timestamptz,
+  lat         double precision,
+  lon         double precision,
+  geo         geography(point, 4326),
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+create index if not exists idx_pubof_geo on publications_officielles using gist (geo);
+create index if not exists idx_pubof_date on publications_officielles (created_at desc);
+
+create or replace function geo_publication_officielle() returns trigger as $$
+begin
+  if new.lat is null or new.lon is null then
+    select s.lat, s.lon into new.lat, new.lon
+      from public.secteurs s where s.code_insee = new.secteur;
+  end if;
+  new.geo := st_point(new.lon, new.lat)::geography;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_geo_pubof on publications_officielles;
+create trigger trg_geo_pubof before insert or update on publications_officielles
+  for each row execute function geo_publication_officielle();
+
+alter table publications_officielles enable row level security;
+drop policy if exists lecture_pubof on publications_officielles;
+create policy lecture_pubof on publications_officielles for select using (true);
+drop policy if exists creation_pubof on publications_officielles;
+create policy creation_pubof on publications_officielles for insert
+  with check (auteur_id = auth.uid() and est_organisation());
+drop policy if exists maj_pubof on publications_officielles;
+create policy maj_pubof on publications_officielles for update
+  using (auteur_id = auth.uid() or est_moderateur());
+drop policy if exists suppr_pubof on publications_officielles;
+create policy suppr_pubof on publications_officielles for delete
+  using (auteur_id = auth.uid() or est_moderateur());
+
+-- ── Sondages ──
+create table if not exists sondages (
+  id            uuid primary key default uuid_generate_v4(),
+  publication_id uuid references publications_officielles(id) on delete cascade,
+  auteur_id     uuid references profils(id) on delete cascade not null,
+  secteur       text references secteurs(code_insee) not null,
+  question      text not null check (length(trim(question)) between 3 and 300),
+  precisions    text,
+  choix_multiple boolean default false not null,
+  anonyme       boolean default true not null,
+  clos_le       timestamptz,
+  lat           double precision,
+  lon           double precision,
+  geo           geography(point, 4326),
+  created_at    timestamptz default now()
+);
+create index if not exists idx_sondages_geo on sondages using gist (geo);
+
+create table if not exists sondage_options (
+  id         uuid primary key default uuid_generate_v4(),
+  sondage_id uuid references sondages(id) on delete cascade not null,
+  libelle    text not null check (length(trim(libelle)) between 1 and 120),
+  position   int default 0 not null
+);
+create index if not exists idx_sondage_options on sondage_options (sondage_id, position);
+
+create table if not exists sondage_votes (
+  id         uuid primary key default uuid_generate_v4(),
+  sondage_id uuid references sondages(id) on delete cascade not null,
+  option_id  uuid references sondage_options(id) on delete cascade not null,
+  profil_id  uuid references profils(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  unique (option_id, profil_id)
+);
+create index if not exists idx_sondage_votes on sondage_votes (sondage_id, profil_id);
+
+create or replace function geo_sondage() returns trigger as $$
+begin
+  if new.lat is null or new.lon is null then
+    select s.lat, s.lon into new.lat, new.lon
+      from public.secteurs s where s.code_insee = new.secteur;
+  end if;
+  new.geo := st_point(new.lon, new.lat)::geography;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_geo_sondage on sondages;
+create trigger trg_geo_sondage before insert or update on sondages
+  for each row execute function geo_sondage();
+
+alter table sondages enable row level security;
+alter table sondage_options enable row level security;
+alter table sondage_votes enable row level security;
+
+drop policy if exists lecture_sondages on sondages;
+create policy lecture_sondages on sondages for select using (true);
+drop policy if exists creation_sondage on sondages;
+create policy creation_sondage on sondages for insert
+  with check (auteur_id = auth.uid() and est_organisation());
+drop policy if exists maj_sondage on sondages;
+create policy maj_sondage on sondages for update
+  using (auteur_id = auth.uid() or est_moderateur());
+drop policy if exists suppr_sondage on sondages;
+create policy suppr_sondage on sondages for delete
+  using (auteur_id = auth.uid() or est_moderateur());
+
+drop policy if exists lecture_options on sondage_options;
+create policy lecture_options on sondage_options for select using (true);
+drop policy if exists ecriture_options on sondage_options;
+create policy ecriture_options on sondage_options for all
+  using (exists (select 1 from sondages s
+                  where s.id = sondage_id and s.auteur_id = auth.uid()))
+  with check (exists (select 1 from sondages s
+                       where s.id = sondage_id and s.auteur_id = auth.uid()));
+
+-- Les votes ne sont jamais lisibles nominativement par autrui : chacun
+-- ne voit que le sien. Les totaux passent par une fonction.
+drop policy if exists lecture_votes on sondage_votes;
+create policy lecture_votes on sondage_votes for select using (profil_id = auth.uid());
+drop policy if exists creation_vote on sondage_votes;
+create policy creation_vote on sondage_votes for insert
+  with check (profil_id = auth.uid()
+    and exists (select 1 from sondages s where s.id = sondage_id
+                 and (s.clos_le is null or s.clos_le > now())));
+drop policy if exists suppr_vote on sondage_votes;
+create policy suppr_vote on sondage_votes for delete using (profil_id = auth.uid());
+
+-- ═══════════════════════════════════════════════════════════════
+--  NOTIFICATIONS
+--  Une publication de la mairie ou un sondage arrive dans l'espace
+--  Messages, à côté des conversations. Chaque habitant du rayon en
+--  reçoit une, et la marque lue à la lecture.
+-- ═══════════════════════════════════════════════════════════════
+create table if not exists notifications (
+  id          uuid primary key default uuid_generate_v4(),
+  profil_id   uuid references profils(id) on delete cascade not null,
+  categorie   text not null,          -- publication | sondage
+  titre       text not null,
+  apercu      text,
+  lien        text not null,
+  auteur_nom  text,
+  lu_le       timestamptz,
+  created_at  timestamptz default now()
+);
+create index if not exists idx_notif on notifications (profil_id, lu_le, created_at desc);
+
+alter table notifications enable row level security;
+drop policy if exists lecture_notif on notifications;
+create policy lecture_notif on notifications for select using (profil_id = auth.uid());
+drop policy if exists maj_notif on notifications;
+create policy maj_notif on notifications for update using (profil_id = auth.uid());
+drop policy if exists suppr_notif on notifications;
+create policy suppr_notif on notifications for delete using (profil_id = auth.uid());
+-- Création réservée aux déclencheurs : personne ne notifie à la main.
+
+/**
+ * Prévient les habitants du rayon d'une nouvelle publication.
+ * Le rayon de chaque habitant est respecté : on ne notifie pas
+ * quelqu'un pour une commune qu'il ne verrait pas.
+ */
+create or replace function notifier_secteur(
+  p_geo geography, p_categorie text, p_titre text,
+  p_apercu text, p_lien text, p_auteur uuid
+) returns int as $$
+declare v_nom text; v_n int;
+begin
+  select coalesce(organisation_nom, raison_sociale, prenom) into v_nom
+    from public.profils where id = p_auteur;
+
+  insert into public.notifications (profil_id, categorie, titre, apercu, lien, auteur_nom)
+  select p.id, p_categorie, p_titre, left(coalesce(p_apercu, ''), 160), p_lien, v_nom
+    from public.profils p
+    join public.secteurs s on s.code_insee = p.secteur
+   where p.id <> p_auteur
+     and st_dwithin(p_geo, st_point(s.lon, s.lat)::geography, p.rayon_km * 1000);
+
+  get diagnostics v_n = row_count;
+  return v_n;
+end $$ language plpgsql security definer set search_path = public;
+
+create or replace function notifier_publication() returns trigger as $$
+begin
+  perform notifier_secteur(new.geo, 'publication', new.titre,
+    new.texte, '/informations/' || new.id, new.auteur_id);
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_notif_pubof on publications_officielles;
+create trigger trg_notif_pubof after insert on publications_officielles
+  for each row execute function notifier_publication();
+
+create or replace function notifier_sondage() returns trigger as $$
+begin
+  perform notifier_secteur(new.geo, 'sondage', new.question,
+    new.precisions, '/sondages/' || new.id, new.auteur_id);
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_notif_sondage on sondages;
+create trigger trg_notif_sondage after insert on sondages
+  for each row execute function notifier_sondage();
+
+create or replace function notifications_non_lues() returns int as $$
+  select count(*)::int from notifications
+   where profil_id = auth.uid() and lu_le is null;
+$$ language sql stable security definer set search_path = public;
+
+create or replace function marquer_notifications_lues() returns void as $$
+  update notifications set lu_le = now()
+   where profil_id = auth.uid() and lu_le is null;
+$$ language sql security definer set search_path = public;
+
+-- ── Lecture des publications et sondages, soumise au rayon ──
+create or replace function publications_officielles_autour(
+  p_lat double precision, p_lon double precision,
+  p_rayon_km int default 20, p_limite int default 20
+)
+returns table (
+  id uuid, categorie text, titre text, texte text, photos text[], lien text,
+  epinglee boolean, created_at timestamptz, distance_km numeric,
+  auteur_id uuid, auteur_nom text, auteur_type text, auteur_verifiee boolean,
+  auteur_avatar text
+) as $$
+  select p.id, p.categorie, p.titre, p.texte, p.photos, p.lien,
+         p.epinglee, p.created_at,
+         round((st_distance(p.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+         pr.id, coalesce(pr.organisation_nom, pr.prenom), pr.organisation,
+         pr.organisation_verifiee, pr.avatar_url
+    from publications_officielles p
+    join profils pr on pr.id = p.auteur_id
+   where (p.expire_le is null or p.expire_le > now())
+     and st_dwithin(p.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+   order by p.epinglee desc, p.created_at desc
+   limit p_limite;
+$$ language sql stable security definer set search_path = public;
+
+create or replace function sondages_autour(
+  p_lat double precision, p_lon double precision,
+  p_rayon_km int default 20, p_limite int default 20
+)
+returns table (
+  id uuid, question text, precisions text, choix_multiple boolean,
+  clos_le timestamptz, created_at timestamptz, distance_km numeric,
+  auteur_id uuid, auteur_nom text, auteur_type text, auteur_verifiee boolean,
+  nb_votants int, a_vote boolean
+) as $$
+  select s.id, s.question, s.precisions, s.choix_multiple,
+         s.clos_le, s.created_at,
+         round((st_distance(s.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+         pr.id, coalesce(pr.organisation_nom, pr.prenom), pr.organisation,
+         pr.organisation_verifiee,
+         (select count(distinct v.profil_id)::int from sondage_votes v where v.sondage_id = s.id),
+         exists (select 1 from sondage_votes v
+                  where v.sondage_id = s.id and v.profil_id = auth.uid())
+    from sondages s
+    join profils pr on pr.id = s.auteur_id
+   where st_dwithin(s.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+   order by (s.clos_le is null or s.clos_le > now()) desc, s.created_at desc
+   limit p_limite;
+$$ language sql stable security definer set search_path = public;
+
+/**
+ * Résultats d'un sondage, en temps réel.
+ * Les totaux sont publics, les votes individuels ne le sont pas :
+ * la fonction ne renvoie que des nombres, plus le choix du lecteur.
+ */
+create or replace function resultats_sondage(p_sondage uuid)
+returns table (
+  option_id uuid, libelle text, rang int, voix int, mon_choix boolean
+) as $$
+  select o.id, o.libelle, o.position,
+         (select count(*)::int from sondage_votes v where v.option_id = o.id),
+         exists (select 1 from sondage_votes v
+                  where v.option_id = o.id and v.profil_id = auth.uid())
+    from sondage_options o
+   where o.sondage_id = p_sondage
+   order by o.position;
+$$ language sql stable security definer set search_path = public;
+
+/**
+ * Enregistre un vote. Remplace le précédent si le sondage n'accepte
+ * qu'un choix : on change d'avis, on ne cumule pas.
+ */
+create or replace function voter_sondage(p_sondage uuid, p_options uuid[])
+returns void as $$
+declare v_moi uuid := auth.uid(); v_multiple boolean; v_clos timestamptz;
+begin
+  if v_moi is null then
+    raise exception 'Connexion requise.' using errcode = 'check_violation';
+  end if;
+
+  select choix_multiple, clos_le into v_multiple, v_clos
+    from public.sondages where id = p_sondage;
+  if v_multiple is null then
+    raise exception 'Sondage introuvable.' using errcode = 'check_violation';
+  end if;
+  if v_clos is not null and v_clos <= now() then
+    raise exception 'Ce sondage est clos.' using errcode = 'check_violation';
+  end if;
+  if array_length(p_options, 1) is null then
+    raise exception 'Choisissez au moins une réponse.' using errcode = 'check_violation';
+  end if;
+  if not v_multiple and array_length(p_options, 1) > 1 then
+    raise exception 'Ce sondage n''accepte qu''une réponse.' using errcode = 'check_violation';
+  end if;
+  if exists (select 1 from unnest(p_options) o
+              where o not in (select id from public.sondage_options
+                               where sondage_id = p_sondage)) then
+    raise exception 'Réponse inconnue.' using errcode = 'check_violation';
+  end if;
+
+  delete from public.sondage_votes where sondage_id = p_sondage and profil_id = v_moi;
+  insert into public.sondage_votes (sondage_id, option_id, profil_id)
+    select p_sondage, o, v_moi from unnest(p_options) o;
+end $$ language plpgsql security definer set search_path = public;

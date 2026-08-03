@@ -94,8 +94,8 @@ export function MesAnnonces({ annonces, total }: { annonces: AnnonceCourte[]; to
 
 /** Raccourcis vers les espaces du membre, pour éviter les détours. */
 export function Raccourcis({
-  estPro, moderateur, nbNonLus,
-}: { estPro: boolean; moderateur: boolean; nbNonLus: number }) {
+  estPro, moderateur, organisation, nbNonLus,
+}: { estPro: boolean; moderateur: boolean; organisation: boolean; nbNonLus: number }) {
   const liens = [
     { href: '/vendre/annonces', label: 'Mes annonces',
       d: 'M4 4h16v16H4zM4 9h16M9 9v11' },
@@ -105,6 +105,10 @@ export function Raccourcis({
       d: 'M18.5 6.5a7 7 0 1 0 0 11M4 10.5h11M4 14h9.5' },
     { href: '/messages', label: 'Messages', badge: nbNonLus,
       d: 'M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4.2-1L3 20l1.1-4.1A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z' },
+    { href: '/informations', label: 'Informations',
+      d: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM12 16v-5M12 8h.01' },
+    ...(organisation ? [{ href: '/officiel', label: 'Ma structure',
+      d: 'M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6' }] : []),
     { href: '/evenements', label: 'Événements',
       d: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z' },
     ...(estPro ? [{ href: '/vendre/gestion', label: 'Gestion',

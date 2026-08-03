@@ -19,10 +19,27 @@ function quand(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
+interface Notif {
+  id: string; categorie: string; titre: string; apercu: string | null;
+  lien: string; auteur_nom: string | null; lu_le: string | null; created_at: string;
+}
+
 export default async function Messages() {
   const { profil, secteur, sb } = await profilCourant();
-  const { data } = await sb.rpc('mes_conversations');
+
+  const [{ data }, { data: notifs }] = await Promise.all([
+    sb.rpc('mes_conversations'),
+    sb.from('notifications')
+      .select('id, categorie, titre, apercu, lien, auteur_nom, lu_le, created_at')
+      .order('created_at', { ascending: false }).limit(20),
+  ]);
+
   const fils = (data ?? []) as Fil[];
+  const avis = (notifs ?? []) as Notif[];
+
+  // Vues à l'ouverture de la page : la pastille ne doit pas survivre à
+  // la lecture.
+  if (avis.some((n) => !n.lu_le)) await sb.rpc('marquer_notifications_lues');
 
   return (
     <>
@@ -35,6 +52,42 @@ export default async function Messages() {
             de retrait, prix.
           </p>
         </div>
+
+        {avis.length > 0 && (
+          <section className="bloc" aria-labelledby="t-avis">
+            <div className="bloc-head">
+              <h2 id="t-avis">Informations du secteur</h2>
+              <Link href="/informations" className="tiny">Toutes</Link>
+            </div>
+            <div className="fils">
+              {avis.map((n) => (
+                <Link key={n.id} href={n.lien}
+                  className={`fil${!n.lu_le ? ' fil-neuf' : ''}`}>
+                  <span className="fil-photo fil-photo-vide" aria-hidden="true">
+                    {n.categorie === 'sondage' ? '?' : 'i'}
+                  </span>
+                  <span className="fil-b">
+                    <span className="fil-tete">
+                      <b>{n.titre}</b>
+                      <span className="tiny">{quand(n.created_at)}</span>
+                    </span>
+                    <span className="fil-sujet">
+                      {n.categorie === 'sondage' ? 'Sondage' : 'Information'}
+                      {n.auteur_nom ? ` · ${n.auteur_nom}` : ''}
+                    </span>
+                    {n.apercu && <span className="fil-apercu">{n.apercu}</span>}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {avis.length > 0 && (
+          <div className="bloc-head" style={{ marginTop: 22 }}>
+            <h2>Conversations</h2>
+          </div>
+        )}
 
         {fils.length > 0 ? (
           <div className="fils">

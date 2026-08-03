@@ -777,3 +777,40 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .card .bloc-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .card .bloc-head .tiny{color:var(--forest-2);font-weight:600;text-decoration:underline;
   text-underline-offset:3px}
+
+/* ── Informations officielles et sondages ── */
+.info{display:flex;gap:0;flex-direction:column;background:var(--paper);
+  border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden;
+  transition:box-shadow .18s,border-color .18s}
+.info:hover{box-shadow:var(--sh-m);border-color:var(--leaf-line)}
+.info-alerte{border-left:4px solid var(--tomato)}
+.info-photo{aspect-ratio:2.6;background:var(--cream)}
+.info-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.info-b{padding:14px 15px}
+.info-tete{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.info-b h4{color:var(--forest)}
+.info-txt{font-size:.85rem;color:var(--ink-soft);margin-top:6px;line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.info-b .item-meta{margin-top:9px}
+.case{display:flex;align-items:center;gap:10px;min-height:44px;font-size:.88rem;
+  color:var(--forest);cursor:pointer}
+.case input{width:19px;height:19px;accent-color:#6FA83A;flex-shrink:0}
+/* Sondage : la jauge occupe le fond du bouton, le texte passe devant. */
+.sond{display:grid;gap:8px}
+.sond-o{position:relative;display:flex;align-items:center;gap:10px;width:100%;
+  min-height:46px;padding:11px 13px;border:1.5px solid var(--line);border-radius:var(--r-s);
+  background:var(--paper);overflow:hidden;text-align:left;transition:border-color .15s}
+.sond-o:not(:disabled):hover{border-color:var(--leaf)}
+.sond-o.on{border-color:var(--forest)}
+.sond-jauge{position:absolute;inset:0 auto 0 0;background:var(--leaf-soft);
+  transition:width .3s;pointer-events:none}
+.sond-o.on .sond-jauge{background:#DCEBC9}
+.sond-l{position:relative;display:flex;align-items:center;gap:9px;flex:1;
+  font-size:.9rem;color:var(--forest);font-weight:500}
+.sond-case{width:17px;height:17px;border-radius:50%;border:2px solid var(--trait);
+  flex-shrink:0;transition:.15s}
+.sond-case.carre{border-radius:5px}
+.sond-o.on .sond-case{border-color:var(--forest);background:var(--forest);
+  box-shadow:inset 0 0 0 3px var(--paper)}
+.sond-n{position:relative;font-size:.85rem;font-weight:700;color:var(--forest-2);
+  font-variant-numeric:tabular-nums;white-space:nowrap}

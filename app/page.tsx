@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import Link from 'next/link';
-import { annoncesAutour, catalogue, evenementsAutour, producteursAutour, annoncesEnAvant, classementVoisins } from '@/lib/donnees';
+import { annoncesAutour, catalogue, evenementsAutour, producteursAutour, annoncesEnAvant, classementVoisins, informationsAutour } from '@/lib/donnees';
 import { contexteVisite } from '@/lib/contexte';
 import ChoixCommune from '@/components/ChoixCommune';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
@@ -9,6 +9,7 @@ import CarteAnnonce from '@/components/CarteAnnonce';
 import BarreFiltres from '@/components/BarreFiltres';
 import { EncartPub } from '@/components/EncartPub';
 import { Classement, type Voisin } from '@/components/Classement';
+import CarteInformation, { type InformationProche } from '@/components/CarteInformation';
 import CarteEvenement from '@/components/CarteEvenement';
 import PiedDePage from '@/components/PiedDePage';
 import BlocMeteo from '@/components/Meteo';
@@ -38,7 +39,7 @@ export default async function Accueil({
     );
   }
 
-  const [annonces, { produits }, evenements, meteo, producteurs, enAvant, voisins] = await Promise.all([
+  const [annonces, { produits }, evenements, meteo, producteurs, enAvant, voisins, infos] = await Promise.all([
     annoncesAutour(secteur.lat, secteur.lon, rayonKm, searchParams.cat),
     catalogue(),
     evenementsAutour(secteur.lat, secteur.lon, rayonKm, 3),
@@ -46,6 +47,7 @@ export default async function Accueil({
     producteursAutour(secteur.lat, secteur.lon, rayonKm),
     annoncesEnAvant(secteur.lat, secteur.lon, rayonKm, 12),
     classementVoisins(secteur.lat, secteur.lon, rayonKm, 10),
+    informationsAutour(secteur.lat, secteur.lon, rayonKm, 3),
   ]);
 
   // « Paniers » n'est pas une catégorie du catalogue : c'est un filtre
@@ -146,6 +148,20 @@ export default async function Accueil({
                     </div>
                     {p.pro_verifie && <div className="prod-badges"><span className="badge b-pro">Vérifié</span></div>}
                   </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {(infos as InformationProche[]).length > 0 && (
+            <section className="bloc" aria-labelledby="titre-infos">
+              <div className="bloc-head">
+                <h2 id="titre-infos">Informations du secteur</h2>
+                <Link href="/informations" className="tiny">Toutes</Link>
+              </div>
+              <div className="events">
+                {(infos as InformationProche[]).map((i) => (
+                  <CarteInformation key={i.id} info={i} />
                 ))}
               </div>
             </section>

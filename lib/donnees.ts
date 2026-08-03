@@ -103,3 +103,16 @@ export async function classementVoisins(lat: number, lon: number, rayonKm: numbe
   }
   return data ?? [];
 }
+
+/** Informations publiées par les mairies et associations du rayon. */
+export async function informationsAutour(lat: number, lon: number, rayonKm: number, limite = 4) {
+  const sb = creerClientServeur();
+  const { data, error } = await sb.rpc('publications_officielles_autour', {
+    p_lat: lat, p_lon: lon, p_rayon_km: rayonKm, p_limite: limite,
+  });
+  if (error) {
+    console.error('publications_officielles_autour:', error.message);
+    return [];
+  }
+  return data ?? [];
+}
