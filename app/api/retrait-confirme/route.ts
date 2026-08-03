@@ -1,52 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { creerClientServeur } from '@/lib/supabase-server';
 import { eur } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
-/** Client de service : seul habilité à lire les adresses et à écrire les courriels. */
-function clientService() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!,
-    { auth: { persistSession: false } }
-  );
-}
-
-const EXPEDITEUR = process.env.EXPEDITEUR_COURRIEL
-  ?? 'monpetitpotager.com <onboarding@resend.dev>';
-
-const AVERTISSEMENT = [
-  '',
-  '— — —',
-  'Ce message provient d\'une version d\'essai de monpetitpotager.com.',
-  'Le site est en construction : aucune somme n\'est facturée, aucun',
-  'paiement n\'est encaissé, et aucune transaction n\'a de valeur',
-  'commerciale. Cette commande est un test.',
-].join('\n');
-
-/**
- * Envoi effectif par Resend, si une clé est configurée.
- * Sans clé, le message reste consigné en attente : rien n'est perdu,
- * et personne ne croit qu'un courriel est parti alors qu'il ne l'est pas.
- */
-async function envoyer(destinataire: string, sujet: string, corps: string) {
-  const cle = process.env.RESEND_API_KEY;
-  if (!cle) return { envoye: false, erreur: 'Aucun service d\'envoi configuré' };
-
-  try {
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${cle}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: EXPEDITEUR, to: [destinataire], subject: sujet, text: corps }),
-    });
-    if (!r.ok) return { envoye: false, erreur: `${r.status} ${(await r.text()).slice(0, 200)}` };
-    return { envoye: true, erreur: null };
-  } catch (e) {
-    return { envoye: false, erreur: (e as Error).message.slice(0, 200) };
-  }
-}
+import { clientService, envoyerCourriel, AVERTISSEMENT } from '@/lib/courriel';
 
 export async function POST(requete: Request) {
   const { commandeId } = await requete.json().catch(() => ({ commandeId: null }));
@@ -115,19 +73,10 @@ export async function POST(requete: Request) {
       AVERTISSEMENT,
     ].join('\n');
 
-    const resultat = await envoyer(d.email, sujet, corps);
-    if (resultat.envoye) envoyes += 1;
-
-    await service.from('courriels').insert({
-      destinataire: d.email,
-      sujet,
-      corps,
-      motif: 'retrait_confirme',
-      commande_id: commandeId,
-      statut: resultat.envoye ? 'envoye' : 'en_attente',
-      erreur: resultat.erreur,
-      envoye_le: resultat.envoye ? new Date().toISOString() : null,
-    });
+    if (await envoyerCourriel({
+      destinataire: d.email, sujet, corps,
+      motif: 'retrait_confirme', commandeId,
+    })) envoyes += 1;
   }
 
   return NextResponse.json({ destinataires: destinataires.length, envoyes });

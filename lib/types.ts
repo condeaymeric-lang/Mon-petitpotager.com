@@ -33,6 +33,8 @@ export interface Profil {
   organisation?: 'mairie' | 'association' | 'collectif' | null;
   organisation_nom?: string | null;
   organisation_verifiee?: boolean;
+  compte_valide?: boolean;
+  refus_motif?: string | null;
   bio: string | null;
   raison_sociale: string | null;
   role: Role;

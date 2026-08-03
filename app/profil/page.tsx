@@ -6,6 +6,7 @@ import PanneauProfil from './PanneauProfil';
 import BonsAchat from './BonsAchat';
 import ModifierProfil from './ModifierProfil';
 import { MesAnnonces, Raccourcis, type AnnonceCourte } from './MesAnnonces';
+import { CompteEnAttente } from '@/components/CompteEnAttente';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,10 @@ export default async function Profil() {
             </p>
           </div>
         </div>
+
+        {!profil.compte_valide && (
+          <CompteEnAttente refus={profil.refus_motif} />
+        )}
 
         <Raccourcis
           estPro={profil.role === 'pro'}

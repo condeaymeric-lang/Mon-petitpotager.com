@@ -157,7 +157,7 @@ export default async function Accueil({
             <section className="bloc" aria-labelledby="titre-infos">
               <div className="bloc-head">
                 <h2 id="titre-infos">Informations du secteur</h2>
-                <Link href="/informations" className="tiny">Toutes</Link>
+                <Link href="/place" className="tiny">La place du village</Link>
               </div>
               <div className="events">
                 {(infos as InformationProche[]).map((i) => (

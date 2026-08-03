@@ -2238,3 +2238,176 @@ begin
   insert into public.sondage_votes (sondage_id, option_id, profil_id)
     select p_sondage, o, v_moi from unnest(p_options) o;
 end $$ language plpgsql security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  VALIDATION DES COMPTES
+--  Tant que le service est en construction, aucune inscription n'est
+--  active avant d'avoir été approuvée par la modération. Un compte en
+--  attente peut consulter, pas publier ni commander.
+-- ═══════════════════════════════════════════════════════════════
+alter table profils add column if not exists compte_valide boolean default false not null;
+alter table profils add column if not exists valide_le timestamptz;
+alter table profils add column if not exists valide_par uuid references profils(id) on delete set null;
+alter table profils add column if not exists refus_motif text;
+
+grant select (compte_valide, valide_le, refus_motif) on profils to anon, authenticated;
+-- Ni compte_valide ni valide_par ne sont ouverts en écriture au membre.
+
+create or replace function compte_actif(p_profil uuid default null) returns boolean as $$
+  select coalesce((select compte_valide from public.profils
+                    where id = coalesce(p_profil, auth.uid())), false);
+$$ language sql stable security definer set search_path = public;
+
+-- Les comptes existants sont validés : ce sont ceux d'avant la règle.
+update profils set compte_valide = true, valide_le = coalesce(valide_le, now())
+ where compte_valide = false;
+
+-- ── Publier et vendre supposent un compte validé ──
+drop policy if exists creation_annonce on annonces;
+create policy creation_annonce on annonces for insert
+  with check (vendeur_id = auth.uid() and compte_actif());
+
+drop policy if exists creation_evenement on evenements;
+create policy creation_evenement on evenements for insert
+  with check (auteur_id = auth.uid() and compte_actif());
+
+drop policy if exists creation_pubof on publications_officielles;
+create policy creation_pubof on publications_officielles for insert
+  with check (auteur_id = auth.uid() and est_organisation() and compte_actif());
+
+drop policy if exists creation_sondage on sondages;
+create policy creation_sondage on sondages for insert
+  with check (auteur_id = auth.uid() and est_organisation() and compte_actif());
+
+-- ── Demandes de statut d'organisation ──
+create table if not exists demandes_organisation (
+  id            uuid primary key default uuid_generate_v4(),
+  profil_id     uuid references profils(id) on delete cascade not null,
+  type          text not null check (type in ('mairie', 'association', 'collectif')),
+  nom           text not null check (length(trim(nom)) between 2 and 140),
+  email_officiel text not null,
+  fonction      text,
+  telephone     text,
+  site_officiel text,
+  justification text,
+  statut        text not null default 'en_attente',  -- en_attente | acceptee | refusee
+  motif_reponse text,
+  traite_par    uuid references profils(id) on delete set null,
+  traite_le     timestamptz,
+  created_at    timestamptz default now()
+);
+create index if not exists idx_demandes_org on demandes_organisation (statut, created_at desc);
+
+alter table demandes_organisation enable row level security;
+drop policy if exists lecture_demande_org on demandes_organisation;
+create policy lecture_demande_org on demandes_organisation for select
+  using (profil_id = auth.uid() or est_moderateur());
+drop policy if exists creation_demande_org on demandes_organisation;
+create policy creation_demande_org on demandes_organisation for insert
+  with check (profil_id = auth.uid());
+-- La réponse passe par repondre_demande_organisation().
+
+/**
+ * Réponse de la modération à une demande d'organisation.
+ * L'acceptation pose le statut et la vérification en une fois : c'est
+ * la même décision, elle ne doit pas pouvoir se faire à moitié.
+ */
+create or replace function repondre_demande_organisation(
+  p_demande uuid, p_accepte boolean, p_motif text default null
+) returns void as $$
+declare v_d record;
+begin
+  if not est_moderateur() then
+    raise exception 'Action réservée à la modération.' using errcode = 'check_violation';
+  end if;
+
+  select * into v_d from public.demandes_organisation where id = p_demande;
+  if v_d.id is null then
+    raise exception 'Demande introuvable.' using errcode = 'check_violation';
+  end if;
+  if v_d.statut <> 'en_attente' then
+    raise exception 'Cette demande a déjà été traitée.' using errcode = 'check_violation';
+  end if;
+  if not p_accepte and coalesce(length(trim(p_motif)), 0) < 3 then
+    raise exception 'Un motif de refus est obligatoire.' using errcode = 'check_violation';
+  end if;
+
+  update public.demandes_organisation
+     set statut = case when p_accepte then 'acceptee' else 'refusee' end,
+         motif_reponse = nullif(trim(coalesce(p_motif, '')), ''),
+         traite_par = auth.uid(), traite_le = now()
+   where id = p_demande;
+
+  if p_accepte then
+    update public.profils
+       set organisation = v_d.type, organisation_nom = v_d.nom,
+           organisation_verifiee = true, updated_at = now()
+     where id = v_d.profil_id;
+  end if;
+
+  insert into public.notifications (profil_id, categorie, titre, apercu, lien, auteur_nom)
+    values (v_d.profil_id, 'compte',
+      case when p_accepte then 'Votre structure est vérifiée'
+           else 'Votre demande n''a pas été retenue' end,
+      case when p_accepte then v_d.nom || ' peut désormais publier des informations.'
+           else coalesce(p_motif, '') end,
+      '/officiel', 'Modération');
+end $$ language plpgsql security definer set search_path = public;
+
+/**
+ * Validation d'une inscription par la modération.
+ * Sans elle, le compte peut regarder mais ne peut rien publier.
+ */
+create or replace function valider_compte(
+  p_profil uuid, p_accepte boolean, p_motif text default null
+) returns void as $$
+begin
+  if not est_moderateur() then
+    raise exception 'Action réservée à la modération.' using errcode = 'check_violation';
+  end if;
+  if not p_accepte and coalesce(length(trim(p_motif)), 0) < 3 then
+    raise exception 'Un motif de refus est obligatoire.' using errcode = 'check_violation';
+  end if;
+
+  update public.profils
+     set compte_valide = p_accepte,
+         valide_le = case when p_accepte then now() else null end,
+         valide_par = auth.uid(),
+         refus_motif = case when p_accepte then null else trim(p_motif) end,
+         updated_at = now()
+   where id = p_profil;
+
+  insert into public.notifications (profil_id, categorie, titre, apercu, lien, auteur_nom)
+    values (p_profil, 'compte',
+      case when p_accepte then 'Votre compte est activé'
+           else 'Votre inscription n''a pas été retenue' end,
+      case when p_accepte then 'Vous pouvez publier, acheter et vendre.'
+           else coalesce(p_motif, '') end,
+      '/profil', 'Modération');
+end $$ language plpgsql security definer set search_path = public;
+
+/** Comptes et demandes en attente, pour l'écran de modération. */
+create or replace function file_moderation()
+returns table (
+  genre text, id uuid, profil_id uuid, prenom text, email text,
+  detail text, secteur text, created_at timestamptz
+) as $$
+  select 'compte', p.id, p.id, p.prenom, u.email::text,
+         case p.role when 'pro' then 'Producteur professionnel'
+                     when 'amateur' then 'Jardinier amateur'
+                     else 'Acheteur' end,
+         s.nom, p.created_at
+    from profils p
+    join auth.users u on u.id = p.id
+    left join secteurs s on s.code_insee = p.secteur
+   where est_moderateur() and p.compte_valide = false and p.refus_motif is null
+  union all
+  select 'organisation', d.id, d.profil_id, p.prenom, d.email_officiel,
+         d.type || ' · ' || d.nom || coalesce(' · ' || d.fonction, ''),
+         s.nom, d.created_at
+    from demandes_organisation d
+    join profils p on p.id = d.profil_id
+    left join secteurs s on s.code_insee = p.secteur
+   where est_moderateur() and d.statut = 'en_attente'
+   order by 8;
+$$ language sql stable security definer set search_path = public;

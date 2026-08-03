@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { profilCourant } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import Espace, { type PublicationOff, type SondageOff } from './Espace';
-import Declarer from './Declarer';
+import Declarer, { type DemandeEnCours } from './Declarer';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +28,14 @@ export default async function Officiel() {
   }
 
   if (!profil.organisation) {
+    const { data: demande } = await sb
+      .from('demandes_organisation')
+      .select('id, type, nom, statut, motif_reponse, created_at')
+      .eq('profil_id', profil.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     return (
       <>
         <BarreHaut commune={secteur.nom} rayonKm={profil.rayon_km} />
@@ -39,7 +47,7 @@ export default async function Officiel() {
               les habitants par sondage.
             </p>
           </div>
-          <Declarer />
+          <Declarer demande={(demande ?? undefined) as DemandeEnCours | undefined} />
         </div></div>
         <BarreBas />
       </>

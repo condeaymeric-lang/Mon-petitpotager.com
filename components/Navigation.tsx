@@ -39,6 +39,11 @@ const PRODUCTEURS = {
   d: 'M3 21h18M5 21V9l7-4 7 4v12M10 21v-5h4v5',
 };
 
+const PLACE = {
+  href: '/place', cle: 'place', label: 'La place',
+  d: 'M3 21h18M6 21V11M18 21V11M4 11h16l-8-6-8 6ZM10 21v-5h4v5',
+};
+
 /** Nombre de messages non lus, relu à chaque changement de page. */
 function useNonLus() {
   const [n, setN] = useState(0);
@@ -87,7 +92,7 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
 
           <nav className="dsk-nav" aria-label="Navigation principale">
             {[...onglets.filter((o) => o.cle !== 'profil'),
-              ...(modeVendre ? [] : [PRODUCTEURS])].map((o) => {
+              ...(modeVendre ? [] : [PLACE, PRODUCTEURS])].map((o) => {
               const actif = o.href === '/' ? path === '/' : path.startsWith(o.href);
               return (
                 <Link key={o.cle} href={o.href} className={actif ? 'on' : ''}>

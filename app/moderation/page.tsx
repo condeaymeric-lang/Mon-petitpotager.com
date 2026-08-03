@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { profilCourant } from '@/lib/donnees';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import Liste, { type AnnonceMod, type EntreeJournal } from './Liste';
+import FileAttente, { type Attente } from './FileAttente';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,10 +36,11 @@ export default async function Moderation({
   }
 
   const recherche = searchParams.q ?? '';
-  const [annonces, journal] = await Promise.all([
+  const [annonces, journal, file] = await Promise.all([
     sb.rpc('annonces_a_moderer', { p_recherche: recherche || null, p_limite: 80 }),
     sb.from('journal_moderation').select('id, titre, action, motif, created_at')
       .order('created_at', { ascending: false }).limit(20),
+    sb.rpc('file_moderation'),
   ]);
 
   return (
@@ -52,6 +54,8 @@ export default async function Moderation({
             déjà retirées. Chaque intervention demande un motif et reste au journal.
           </p>
         </div>
+
+        <FileAttente file={(file.data ?? []) as Attente[]} />
 
         <Liste
           annonces={(annonces.data ?? []) as AnnonceMod[]}
