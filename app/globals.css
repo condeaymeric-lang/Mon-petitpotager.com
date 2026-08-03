@@ -1040,3 +1040,25 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .votant:hover{border-color:var(--leaf-line);background:var(--leaf-soft)}
 .votant img,.votant-vide{width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0}
 .votant-vide{display:grid;place-items:center;background:var(--leaf-soft);font-size:.68rem}
+
+/* ── Choix de publication, depuis le bouton central ── */
+.pub-voile{position:fixed;inset:0;z-index:90;background:rgba(20,37,26,.5);
+  backdrop-filter:blur(2px);animation:voile .18s ease-out}
+.pub-choix{position:fixed;left:50%;transform:translateX(-50%);z-index:91;
+  bottom:calc(84px + env(safe-area-inset-bottom));width:min(420px,calc(100vw - 24px));
+  background:var(--paper);border-radius:var(--r-l);box-shadow:0 -8px 40px rgba(20,37,26,.28);
+  padding:14px;display:grid;gap:4px;animation:monte .2s ease-out}
+@keyframes monte{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+.pub-choix-t{font-family:var(--titre);font-size:1rem;color:var(--forest);
+  padding:2px 8px 8px}
+.pub-choix a{display:flex;align-items:center;gap:12px;padding:11px 10px;
+  border-radius:var(--r-s);min-height:56px}
+.pub-choix a:hover{background:var(--leaf-soft)}
+.pub-choix-i{flex-shrink:0;width:38px;height:38px;border-radius:50%;display:grid;
+  place-items:center;background:var(--leaf-soft)}
+.pub-choix-i svg{stroke:var(--forest);stroke-width:1.8;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.pub-choix a>span{display:block;min-width:0}
+.pub-choix b{display:block;font-size:.92rem;color:var(--forest)}
+.pub-choix span span{display:block;font-size:.78rem;color:var(--ink-soft);margin-top:1px}
+.pub-choix .btn{margin-top:6px}

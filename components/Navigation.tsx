@@ -6,6 +6,7 @@ import { usePanier } from '@/components/PanierContext';
 import { creerClient } from '@/lib/supabase-client';
 import { Marque } from './Marque';
 import Tiroir from './Tiroir';
+import MenuPublier from './MenuPublier';
 
 const ONGLETS = {
   acheter: [
@@ -295,7 +296,6 @@ export function BarreBas() {
   const cles = modeVendre ? MOBILE.vendre : MOBILE.acheter;
   const onglets = (modeVendre ? ONGLETS.vendre : ONGLETS.acheter)
     .filter((o) => cles.includes(o.cle));
-  const fab = modeVendre ? '/vendre/publier' : '/pourquoi';
   const moitie = Math.ceil(onglets.length / 2);
 
   const lien = (o: (typeof onglets)[number]) => {
@@ -316,9 +316,7 @@ export function BarreBas() {
   return (
     <nav className="tabbar" aria-label="Navigation principale (mobile)">
       {onglets.slice(0, moitie).map(lien)}
-      <Link href={fab} className="fab" aria-label={modeVendre ? 'Publier une annonce' : "Pourquoi l'application"}>
-        <i><svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></i>
-      </Link>
+      <MenuPublier />
       {onglets.slice(moitie).map(lien)}
     </nav>
   );
