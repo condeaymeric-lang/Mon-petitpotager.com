@@ -6,6 +6,7 @@ import { LIBELLE_TYPE, dateLisible, heureLisible } from '@/components/CarteEvene
 import { distanceKm } from '@/lib/utils';
 import Participation from './Participation';
 import Publications, { type Publication } from './Publications';
+import Commentaires, { type Commentaire } from '@/components/Commentaires';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +34,9 @@ export default async function PageEvenement({ params }: { params: { id: string }
     .eq('evenement_id', e.id);
 
   const { data: publications } = await sb.rpc('publications_de', { p_evenement: e.id });
+  const { data: commentaires } = await sb.rpc('commentaires_de', {
+    p_type: 'evenement', p_id: e.id,
+  });
 
   const reponses = participations ?? [];
   const oui = reponses.filter((p: any) => p.vient);
@@ -133,6 +137,13 @@ export default async function PageEvenement({ params }: { params: { id: string }
           connecte
           profilId={profil.id}
           moderateur={!!profil.moderateur}
+        />
+        <Commentaires
+          cibleType="evenement" cibleId={e.id}
+          commentaires={(commentaires ?? []) as Commentaire[]}
+          connecte profilId={profil.id}
+          valide={!!profil.compte_valide} moderateur={!!profil.moderateur}
+          proprietaire={estMien}
         />
       </div></div>
       <BarreBas />

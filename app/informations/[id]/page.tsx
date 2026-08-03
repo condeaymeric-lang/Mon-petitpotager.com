@@ -5,6 +5,7 @@ import { BarreHaut, BarreBas } from '@/components/Navigation';
 import BarreVisiteur from '@/components/BarreVisiteur';
 import { distanceKm } from '@/lib/utils';
 import { LIBELLE_CATEGORIE } from '@/components/CarteInformation';
+import Commentaires, { type Commentaire } from '@/components/Commentaires';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,12 @@ export default async function PageInformation({ params }: { params: { id: string
     ? +distanceKm(secteur.lat, secteur.lon, p.lat, p.lon).toFixed(1)
     : null;
   if (km == null || km > rayonKm) notFound();
+
+  const { data: commentaires } = await sb.rpc('commentaires_de', {
+    p_type: 'information', p_id: p.id,
+  });
+  const { data: moi } = await sb.rpc('mon_profil');
+  const monProfil = (moi?.[0] ?? null) as any;
 
   const nom = p.auteur?.organisation_nom || p.auteur?.prenom;
   const photos: string[] = p.photos ?? [];
@@ -89,6 +96,13 @@ export default async function PageInformation({ params }: { params: { id: string
             avoir été vérifié. Recoupez cette information auprès de la structure concernée.
           </p>
         )}
+        <Commentaires
+          cibleType="information" cibleId={p.id}
+          commentaires={(commentaires ?? []) as Commentaire[]}
+          connecte={connecte} profilId={monProfil?.id ?? null}
+          valide={!!monProfil?.compte_valide} moderateur={!!monProfil?.moderateur}
+          proprietaire={monProfil?.id === p.auteur_id}
+        />
       </div></div>
       {connecte && <BarreBas />}
     </>

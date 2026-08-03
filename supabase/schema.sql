@@ -2723,3 +2723,102 @@ returns table (
    where r.sujet_id = p_sujet
    order by r.created_at;
 $$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  COMMENTAIRES
+--  Sous une annonce, un événement ou une information : c'est là que
+--  le village se parle. Une seule table pour les trois, avec le type
+--  de cible, plutôt que trois tables identiques à maintenir.
+-- ═══════════════════════════════════════════════════════════════
+/** Qui a publié la chose commentée. */
+create or replace function proprietaire_cible(p_type text, p_id uuid)
+returns uuid as $$
+  select case p_type
+    when 'annonce' then (select vendeur_id from public.annonces where id = p_id)
+    when 'evenement' then (select auteur_id from public.evenements where id = p_id)
+    when 'information' then (select auteur_id from public.publications_officielles where id = p_id)
+  end;
+$$ language sql stable security definer set search_path = public;
+
+create table if not exists commentaires (
+  id          uuid primary key default uuid_generate_v4(),
+  cible_type  text not null check (cible_type in ('annonce', 'evenement', 'information')),
+  cible_id    uuid not null,
+  auteur_id   uuid references profils(id) on delete cascade not null,
+  parent_id   uuid references commentaires(id) on delete cascade,
+  texte       text not null check (length(trim(texte)) between 1 and 2000),
+  masque      boolean default false not null,
+  masque_par  uuid references profils(id) on delete set null,
+  masque_motif text,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+create index if not exists idx_comm_cible on commentaires (cible_type, cible_id, created_at);
+
+alter table commentaires enable row level security;
+
+-- On lit tout, y compris ce qui est masqué : l'affichage remplace le
+-- texte par une mention, sans faire disparaître le fil de la discussion.
+drop policy if exists lecture_commentaires on commentaires;
+create policy lecture_commentaires on commentaires for select using (true);
+
+drop policy if exists creation_commentaire on commentaires;
+create policy creation_commentaire on commentaires for insert
+  with check (auteur_id = auth.uid() and compte_actif());
+
+drop policy if exists maj_commentaire on commentaires;
+create policy maj_commentaire on commentaires for update using (auteur_id = auth.uid());
+
+-- La suppression appartient à l'auteur du commentaire, à celui de
+-- l'annonce commentée, et à la modération.
+drop policy if exists suppr_commentaire on commentaires;
+create policy suppr_commentaire on commentaires for delete
+  using (auteur_id = auth.uid() or est_moderateur()
+    or auth.uid() = proprietaire_cible(cible_type, cible_id));
+
+/**
+ * Masque un commentaire sans l'effacer.
+ * Le fil garde sa trace : une réponse à un message disparu devient
+ * incompréhensible, et masquer en silence n'est pas loyal.
+ */
+create or replace function masquer_commentaire(
+  p_commentaire uuid, p_masque boolean, p_motif text default null
+) returns void as $$
+declare v_c record;
+begin
+  select c.*, proprietaire_cible(c.cible_type, c.cible_id) as proprio
+    into v_c from public.commentaires c where c.id = p_commentaire;
+  if v_c.id is null then
+    raise exception 'Commentaire introuvable.' using errcode = 'check_violation';
+  end if;
+  if not (est_moderateur() or auth.uid() = v_c.proprio) then
+    raise exception 'Vous ne pouvez pas modérer ce commentaire.' using errcode = 'check_violation';
+  end if;
+  if p_masque and coalesce(length(trim(p_motif)), 0) < 3 then
+    raise exception 'Un motif est obligatoire.' using errcode = 'check_violation';
+  end if;
+
+  update public.commentaires
+     set masque = p_masque,
+         masque_par = case when p_masque then auth.uid() end,
+         masque_motif = case when p_masque then trim(p_motif) end,
+         updated_at = now()
+   where id = p_commentaire;
+end $$ language plpgsql security definer set search_path = public;
+
+/** Fil de commentaires d'une cible, avec ses auteurs. */
+create or replace function commentaires_de(p_type text, p_id uuid)
+returns table (
+  id uuid, parent_id uuid, texte text, masque boolean, masque_motif text,
+  created_at timestamptz, auteur_id uuid, auteur_prenom text,
+  auteur_avatar text, auteur_role text, est_proprietaire boolean
+) as $$
+  select c.id, c.parent_id, c.texte, c.masque, c.masque_motif, c.created_at,
+         pr.id, coalesce(pr.raison_sociale, pr.organisation_nom, pr.prenom),
+         pr.avatar_url, pr.role::text,
+         pr.id = proprietaire_cible(p_type, p_id)
+    from commentaires c
+    join profils pr on pr.id = c.auteur_id
+   where c.cible_type = p_type and c.cible_id = p_id
+   order by coalesce(c.parent_id, c.id), c.created_at;
+$$ language sql stable security definer set search_path = public;

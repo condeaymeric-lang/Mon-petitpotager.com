@@ -938,3 +938,23 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
   white-space:nowrap;transition:.15s}
 .rub-racc a:hover{border-color:var(--leaf);color:var(--forest);background:var(--leaf-soft)}
 .rub-racc a.on{border-color:var(--forest);background:var(--forest);color:#fff}
+
+/* ── Commentaires ── */
+.comms{display:grid;gap:10px}
+.comm-bloc{padding:14px 16px}
+.comm+.comm{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.comm-rep{margin-left:16px;padding-left:12px;border-left:2.5px solid var(--leaf-line)}
+.comm-tete{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.comm-auteur{display:flex;align-items:center;gap:9px;min-width:0}
+.comm-auteur>span{min-width:0}
+.comm-auteur b{display:flex;align-items:center;gap:7px;font-size:.88rem;color:var(--forest)}
+.comm-auteur .tiny{display:block}
+.comm-auteur:hover b{text-decoration:underline}
+.comm-txt{font-size:.91rem;line-height:1.55;color:var(--ink);white-space:pre-line}
+.comm-masque{font-size:.86rem;color:var(--ink-soft);font-style:italic;
+  background:var(--cream);border-radius:var(--r-s);padding:9px 12px}
+.comm-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.comm-actions button{font-size:.78rem;font-weight:600;color:var(--ink-soft);
+  min-height:34px;padding:0 9px;border-radius:var(--r-s)}
+.comm-actions button:hover{background:var(--leaf-soft);color:var(--forest)}
+.comm-actions .comm-suppr:hover{background:#F8EAE7;color:var(--tomato)}

@@ -8,6 +8,7 @@ import { Illustration } from '@/components/Illustrations';
 import { eur, estDeSaison, distanceKm } from '@/lib/utils';
 import BoutonPanier from './BoutonPanier';
 import BoutonEcrire from '@/components/BoutonEcrire';
+import Commentaires, { type Commentaire } from '@/components/Commentaires';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,10 @@ export default async function PageAnnonce({ params }: { params: { id: string } }
   const refLot = (composants ?? []).reduce(
     (t: number, c: any) => t + (c.produit?.prix_ref != null ? c.produit.prix_ref * c.quantite : 0), 0);
   const composantsSansRef = (composants ?? []).filter((c: any) => c.produit?.prix_ref == null).length;
+
+  const { data: commentaires } = await sb.rpc('commentaires_de', {
+    p_type: 'annonce', p_id: a.id,
+  });
 
   const nomVariete = a.variete?.nom ?? a.variete_libre ?? null;
   const estMien = connecte && profil ? a.vendeur_id === profil.id : false;
