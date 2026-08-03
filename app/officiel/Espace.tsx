@@ -236,6 +236,7 @@ function FormSondage({ profilId, secteurCode }: { profilId: string; secteurCode:
   const [precisions, setPrecisions] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [multiple, setMultiple] = useState(false);
+  const [mainLevee, setMainLevee] = useState(false);
   const [clos, setClos] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
@@ -253,6 +254,7 @@ function FormSondage({ profilId, secteurCode }: { profilId: string; secteurCode:
       auteur_id: profilId, secteur: secteurCode,
       question: question.trim(), precisions: precisions.trim() || null,
       choix_multiple: multiple,
+      anonyme: !mainLevee,
       clos_le: clos ? new Date(clos).toISOString() : null,
     }).select('id').single();
 
@@ -283,9 +285,9 @@ function FormSondage({ profilId, secteurCode }: { profilId: string; secteurCode:
     <div className="card">
       <h3>Nouveau sondage</h3>
       <p className="tiny" style={{ marginTop: 5 }}>
-        Les résultats se mettent à jour au fil des votes. Les totaux sont
-        publics, les votes individuels ne le sont pour personne, pas même
-        pour vous.
+        Les résultats se mettent à jour au fil des votes. Par défaut, les
+        totaux sont publics et les votes individuels ne le sont pour
+        personne, pas même pour vous.
       </p>
 
       <div className="field" style={{ marginTop: 14 }}>
@@ -327,6 +329,16 @@ function FormSondage({ profilId, secteurCode }: { profilId: string; secteurCode:
         <input type="checkbox" checked={multiple} onChange={(e) => setMultiple(e.target.checked)} />
         Autoriser plusieurs réponses
       </label>
+
+      <label className="case">
+        <input type="checkbox" checked={mainLevee}
+          onChange={(e) => setMainLevee(e.target.checked)} />
+        Vote à main levée : chacun voit qui a voté quoi
+      </label>
+      <p className="help" style={{ marginTop: 2 }}>
+        Ce choix est définitif. Un sondage à main levée ne pourra pas devenir
+        anonyme, et un sondage anonyme ne pourra jamais dévoiler ses votants.
+      </p>
 
       <div className="field" style={{ marginTop: 12 }}>
         <label htmlFor="so-c">Clore le</label>

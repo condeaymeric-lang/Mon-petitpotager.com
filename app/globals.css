@@ -1030,3 +1030,13 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
   background:var(--cream);font-size:.78rem;font-weight:600;color:var(--forest)}
 .bulle-prod:hover{text-decoration:underline}
 .bulle-moi .bulle-prod{background:rgba(255,255,255,.75)}
+/* Votants d'un sondage à main levée */
+.votants{margin-top:14px;display:grid;gap:11px}
+.votants-l p{margin-bottom:5px}
+.votants-g{display:flex;flex-wrap:wrap;gap:6px}
+.votant{display:inline-flex;align-items:center;gap:6px;padding:4px 11px 4px 4px;
+  border-radius:999px;border:1px solid var(--line);background:var(--paper);
+  font-size:.78rem;font-weight:600;color:var(--forest);min-height:32px}
+.votant:hover{border-color:var(--leaf-line);background:var(--leaf-soft)}
+.votant img,.votant-vide{width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.votant-vide{display:grid;place-items:center;background:var(--leaf-soft);font-size:.68rem}

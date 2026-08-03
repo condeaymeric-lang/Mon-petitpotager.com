@@ -4,7 +4,7 @@ import { contexteVisite } from '@/lib/contexte';
 import { BarreHaut, BarreBas } from '@/components/Navigation';
 import BarreVisiteur from '@/components/BarreVisiteur';
 import { distanceKm } from '@/lib/utils';
-import Vote, { type Resultat } from './Vote';
+import Vote, { type Resultat, type Votant } from './Vote';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +27,10 @@ export default async function PageSondage({ params }: { params: { id: string } }
     : null;
   if (km == null || km > rayonKm) notFound();
 
-  const { data: resultats } = await sb.rpc('resultats_sondage', { p_sondage: s.id });
+  const [{ data: resultats }, { data: votants }] = await Promise.all([
+    sb.rpc('resultats_sondage', { p_sondage: s.id }),
+    s.anonyme ? Promise.resolve({ data: [] }) : sb.rpc('votants_sondage', { p_sondage: s.id }),
+  ]);
   const clos = !!s.clos_le && new Date(s.clos_le) <= new Date();
   const nom = s.auteur?.organisation_nom || s.auteur?.prenom;
 
@@ -45,6 +48,9 @@ export default async function PageSondage({ params }: { params: { id: string } }
             ? <span className="badge b-ok">Compte vérifié</span>
             : <span className="badge b-done">Non vérifié</span>}
           {clos && <span className="badge b-done">Clos</span>}
+          <span className={`badge ${s.anonyme === false ? 'b-am' : 'b-ok'}`}>
+            {s.anonyme === false ? 'À main levée' : 'Vote anonyme'}
+          </span>
         </div>
 
         <div className="page-head">
@@ -65,14 +71,17 @@ export default async function PageSondage({ params }: { params: { id: string } }
         <Vote
           sondageId={s.id}
           resultats={(resultats ?? []) as Resultat[]}
+          votants={(votants ?? []) as Votant[]}
+          anonyme={s.anonyme !== false}
           multiple={s.choix_multiple}
           clos={clos}
           connecte={connecte}
         />
 
         <p className="tiny center" style={{ marginTop: 12 }}>
-          Les totaux sont publics. Personne ne voit qui a voté quoi, pas même
-          l&apos;auteur du sondage.
+          {s.anonyme === false
+            ? "Ce sondage est à main levée : chacun voit qui a voté quoi. Un sondage à main levée ne peut pas devenir anonyme après coup, ni l'inverse."
+            : "Les totaux sont publics. Personne ne voit qui a voté quoi, pas même l'auteur du sondage."}
         </p>
       </div></div>
       {connecte && <BarreBas />}

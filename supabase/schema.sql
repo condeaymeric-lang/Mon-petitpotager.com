@@ -2950,3 +2950,75 @@ begin
 
   return 0;
 end $$ language plpgsql security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  VOTANTS VISIBLES, AU CHOIX DE L'AUTEUR
+--  Un sondage peut être à main levée : on voit alors qui a voté quoi.
+--  Le choix se fait à la création et ne se change plus : dévoiler
+--  après coup des votes donnés sous promesse d'anonymat serait une
+--  trahison. Les sondages existants restent anonymes.
+-- ═══════════════════════════════════════════════════════════════
+alter table sondages alter column anonyme set default true;
+update sondages set anonyme = true where anonyme is null;
+
+-- Le passage d'un sondage de public à anonyme reste possible (on peut
+-- toujours en promettre plus), l'inverse non.
+create or replace function verrou_anonymat() returns trigger as $$
+begin
+  if old.anonyme = true and new.anonyme = false then
+    raise exception 'Un sondage anonyme ne peut pas devenir public.'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_anonymat on sondages;
+create trigger trg_anonymat before update on sondages
+  for each row execute function verrou_anonymat();
+
+/**
+ * Qui a voté quoi, uniquement sur un sondage à main levée.
+ * Sur un sondage anonyme, la fonction ne renvoie rien du tout.
+ */
+create or replace function votants_sondage(p_sondage uuid)
+returns table (
+  option_id uuid, profil_id uuid, prenom text, avatar_url text, role text
+) as $$
+  select v.option_id, p.id,
+         coalesce(p.raison_sociale, p.organisation_nom, p.prenom),
+         p.avatar_url, p.role::text
+    from sondage_votes v
+    join profils p on p.id = v.profil_id
+   where v.sondage_id = p_sondage
+     and exists (select 1 from sondages s
+                  where s.id = p_sondage and s.anonyme = false)
+   order by v.created_at;
+$$ language sql stable security definer set search_path = public;
+
+-- La liste des sondages indique s'ils sont à main levée.
+drop function if exists sondages_autour(double precision, double precision, int, int);
+create or replace function sondages_autour(
+  p_lat double precision, p_lon double precision,
+  p_rayon_km int default 20, p_limite int default 20
+)
+returns table (
+  id uuid, question text, precisions text, choix_multiple boolean,
+  clos_le timestamptz, created_at timestamptz, distance_km numeric,
+  auteur_id uuid, auteur_nom text, auteur_type text, auteur_verifiee boolean,
+  nb_votants int, a_vote boolean, anonyme boolean
+) as $$
+  select s.id, s.question, s.precisions, s.choix_multiple,
+         s.clos_le, s.created_at,
+         round((st_distance(s.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
+         pr.id, coalesce(pr.organisation_nom, pr.prenom), pr.organisation,
+         pr.organisation_verifiee,
+         (select count(distinct v.profil_id)::int from sondage_votes v where v.sondage_id = s.id),
+         exists (select 1 from sondage_votes v
+                  where v.sondage_id = s.id and v.profil_id = auth.uid()),
+         s.anonyme
+    from sondages s
+    join profils pr on pr.id = s.auteur_id
+   where st_dwithin(s.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
+   order by (s.clos_le is null or s.clos_le > now()) desc, s.created_at desc
+   limit p_limite;
+$$ language sql stable security definer set search_path = public;
