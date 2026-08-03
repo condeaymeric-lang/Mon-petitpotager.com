@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.monpetitpotager.app",
+      "sha256_cert_fingerprints": [
+        "89:9B:C2:B9:9B:8A:F8:13:D5:2D:84:BD:E4:53:EE:65:EF:2C:60:00:85:D2:4D:C0:66:66:77:55:A5:A3:5B:23"
+      ]
+    }
+  }
+]

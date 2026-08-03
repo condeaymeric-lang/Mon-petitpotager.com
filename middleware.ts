@@ -35,6 +35,9 @@ export async function middleware(request: NextRequest) {
     // compte : c'est de l'information publique. Voter, en revanche,
     // demande un compte, et la page le dit.
     '/informations', '/sondages', '/place', '/bistrot',
+    // Le lien entre l'application Android et le site se vérifie ici :
+    // le fichier doit répondre sans session.
+    '/.well-known',
   ];
   const estAccueil = path === '/';
   const estPublique = publiques.some((p) => path.startsWith(p));
