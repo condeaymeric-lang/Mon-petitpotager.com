@@ -57,5 +57,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  // Le manifeste, le service worker et la page hors ligne doivent rester
+  // accessibles sans session : ce sont eux qui rendent le site installable.
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|hors-ligne.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|js|txt|json)$).*)',
+  ],
 };
