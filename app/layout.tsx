@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/Toast';
 import { PanierProvider } from '@/components/PanierContext';
 import BandeauConstruction from '@/components/BandeauConstruction';
 import { ColonnePub } from '@/components/EncartPub';
+import Installation from '@/components/Installation';
 
 export const metadata: Metadata = {
   title: 'mon-petitpotager.com — Cultivons le bon, partageons le meilleur',
@@ -25,6 +26,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/icone-192.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="petitpotager" />
         <link
           href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=Caveat:wght@600;700&display=swap"
           rel="stylesheet"
@@ -34,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#contenu" className="saut-contenu">Aller au contenu</a>
         <BandeauConstruction />
         <ColonnePub />
+        <Installation />
         <ToastProvider>
           <PanierProvider>
             <div id="contenu">{children}</div>

@@ -1,0 +1,24 @@
+{
+  "name": "mon-petitpotager.com",
+  "short_name": "petitpotager",
+  "description": "La place de village entre jardiniers, producteurs et habitants, dans votre rayon.",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F4EA",
+  "theme_color": "#143424",
+  "lang": "fr",
+  "categories": ["food", "shopping", "social"],
+  "icons": [
+    { "src": "/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icone-192-masque.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icone-512-masque.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Publier une annonce", "url": "/vendre/publier" },
+    { "name": "La place du village", "url": "/place" },
+    { "name": "Messages", "url": "/messages" }
+  ]
+}
