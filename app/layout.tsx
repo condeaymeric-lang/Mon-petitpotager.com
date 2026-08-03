@@ -5,7 +5,6 @@ import { ToastProvider } from '@/components/Toast';
 import { PanierProvider } from '@/components/PanierContext';
 import BandeauConstruction from '@/components/BandeauConstruction';
 import { ColonnePub } from '@/components/EncartPub';
-import Avis from '@/components/Avis';
 
 export const metadata: Metadata = {
   title: 'mon-petitpotager.com — Cultivons le bon, partageons le meilleur',
@@ -38,7 +37,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ToastProvider>
           <PanierProvider>
             <div id="contenu">{children}</div>
-            <Avis />
           </PanierProvider>
         </ToastProvider>
       </body>
