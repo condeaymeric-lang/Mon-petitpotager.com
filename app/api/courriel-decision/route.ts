@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { creerClientServeur } from '@/lib/supabase-server';
-import { clientService, envoyerCourriel, adresseDe, AVERTISSEMENT } from '@/lib/courriel';
+import { clientService, envoyerCourriel, adresseDe, AVERTISSEMENT, SITE } from '@/lib/courriel';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,8 +49,8 @@ export async function POST(requete: Request) {
     ...(motif ? ['', `Motif : ${motif}`] : []),
     '',
     accepte
-      ? 'Retrouvez votre espace : https://mon-petitpotager.com/profil'
-      : 'Vous pouvez répondre à ce message ou nous écrire : https://mon-petitpotager.com/contact',
+      ? `Retrouvez votre espace : ${SITE}/profil`
+      : `Vous pouvez répondre à ce message ou nous écrire : ${SITE}/contact`,
     AVERTISSEMENT,
   ].join('\n');
 

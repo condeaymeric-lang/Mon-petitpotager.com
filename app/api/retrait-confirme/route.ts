@@ -4,7 +4,7 @@ import { eur } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
-import { clientService, envoyerCourriel, AVERTISSEMENT } from '@/lib/courriel';
+import { clientService, envoyerCourriel, AVERTISSEMENT, SITE } from '@/lib/courriel';
 
 export async function POST(requete: Request) {
   const { commandeId } = await requete.json().catch(() => ({ commandeId: null }));
@@ -69,7 +69,7 @@ export async function POST(requete: Request) {
         : 'Le versement de votre part est déclenché par cette confirmation.',
       '',
       'Vous pouvez retrouver le détail dans votre espace :',
-      'https://mon-petitpotager.com/commandes',
+      `${SITE}/commandes`,
       AVERTISSEMENT,
     ].join('\n');
 

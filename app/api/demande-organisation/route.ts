@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { creerClientServeur } from '@/lib/supabase-server';
-import { clientService, envoyerCourriel, adressesModeration, AVERTISSEMENT } from '@/lib/courriel';
+import { clientService, envoyerCourriel, adressesModeration, AVERTISSEMENT, SITE } from '@/lib/courriel';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +27,7 @@ export async function POST(requete: Request) {
     `Demandeur : ${p?.prenom ?? user.id}`,
     '',
     "Vérifiez que l'adresse appartient bien à la structure avant d'accepter :",
-    'https://mon-petitpotager.com/moderation',
+    `${SITE}/moderation`,
     AVERTISSEMENT,
   ].join('\n');
 

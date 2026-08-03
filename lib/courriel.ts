@@ -9,6 +9,11 @@ export function clientService() {
   );
 }
 
+/** Adresse publique du site. Le domaine propre n'est pas encore ouvert :
+ *  les liens des courriels doivent mener là où le site répond vraiment. */
+export const SITE = process.env.NEXT_PUBLIC_SITE_URL
+  ?? 'https://mon-petit-potager.vercel.app';
+
 const EXPEDITEUR = process.env.EXPEDITEUR_COURRIEL
   ?? 'mon-petitpotager.com <onboarding@resend.dev>';
 
