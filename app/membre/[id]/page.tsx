@@ -7,6 +7,7 @@ import { Illustration } from '@/components/Illustrations';
 import { FicheDetails } from '@/components/FicheDetails';
 import { eur, distanceKm } from '@/lib/utils';
 import BoutonEcrire from '@/components/BoutonEcrire';
+import { BadgeOrganisation, LigneOrganisation } from '@/components/BadgeOrganisation';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export default async function FicheMembre({ params }: { params: { id: string } }
 
   const { data: m } = await sb
     .from('profils')
-    .select('id, prenom, bio, avatar_url, role, pro_verifie, raison_sociale, est_relais, relais_adresse, relais_horaires, secteur, created_at, site_web, reseau_social, disponibilites, moyens_paiement, methode_culture, label_qualite, annee_installation, surface_ha, specialites')
+    .select('id, prenom, bio, avatar_url, role, pro_verifie, raison_sociale, est_relais, relais_adresse, relais_horaires, secteur, created_at, site_web, reseau_social, disponibilites, moyens_paiement, methode_culture, label_qualite, annee_installation, surface_ha, specialites, organisation, organisation_nom, organisation_verifiee')
     .eq('id', params.id)
     .maybeSingle();
 
@@ -71,6 +72,7 @@ export default async function FicheMembre({ params }: { params: { id: string } }
               </span>
               {m.pro_verifie && <span className="badge b-ok">Vérifié</span>}
               {m.est_relais && <span className="badge b-am">Point relais</span>}
+              <BadgeOrganisation p={m} />
             </div>
             <h1>{estPro && m.raison_sociale ? m.raison_sociale : m.prenom}</h1>
             <p className="muted" style={{ marginTop: 5 }}>
@@ -90,6 +92,8 @@ export default async function FicheMembre({ params }: { params: { id: string } }
               : "Ce membre n'a pas encore rédigé sa présentation.")}
           </p>
         </div>
+
+        <LigneOrganisation p={m} />
 
         <FicheDetails p={m} />
 
