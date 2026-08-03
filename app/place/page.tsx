@@ -7,6 +7,7 @@ import ChoixCommune from '@/components/ChoixCommune';
 import CarteEvenement from '@/components/CarteEvenement';
 import CarteInformation, { type InformationProche } from '@/components/CarteInformation';
 import CarteSujet, { type SujetProche } from '@/components/CarteSujet';
+import Rubrique from '@/components/Rubrique';
 import { Illustration } from '@/components/Illustrations';
 import type { EvenementProche } from '@/lib/types';
 
@@ -83,10 +84,10 @@ export default async function Place() {
         ) : (
           <>
             {ouvertes.length > 0 && (
-              <section className="bloc" aria-labelledby="p-sondages">
-                <div className="bloc-head">
-                  <h2 id="p-sondages">On vous demande votre avis</h2>
-                </div>
+              <Rubrique id="p-sondages" titre="On vous demande votre avis"
+                aide="Consultations ouvertes dans votre secteur"
+                icone="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"
+                lien="/informations" lienLabel="Toutes">
                 <div className="events">
                   {ouvertes.map((s) => (
                     <Link key={s.id} href={`/sondages/${s.id}`} className="info">
@@ -105,52 +106,57 @@ export default async function Place() {
                     </Link>
                   ))}
                 </div>
-              </section>
+              </Rubrique>
             )}
 
             {discussions.length > 0 && (
-              <section className="bloc" aria-labelledby="p-bistrot">
-                <div className="bloc-head">
-                  <h2 id="p-bistrot">Le bistrot du coin</h2>
-                  <Link href="/bistrot" className="tiny">Toutes les discussions</Link>
-                </div>
+              <Rubrique id="p-bistrot" titre="Le bistrot du coin"
+                aide="On y parle jardin, entraide et vie du village"
+                icone="M6 2h12l-1 9a5 5 0 0 1-10 0ZM8 21h8M12 16v5"
+                lien="/bistrot" lienLabel="Toutes"
+                raccourcis={[
+                  { href: '/bistrot?theme=conseils', label: 'Conseils' },
+                  { href: '/bistrot?theme=entraide', label: 'Entraide' },
+                  { href: '/bistrot?theme=bons_plans', label: 'Bons plans' },
+                  { href: '/bistrot?theme=recettes', label: 'Recettes' },
+                  { href: '/bistrot/nouveau', label: 'Ouvrir une discussion' },
+                ]}>
                 <div className="sujets">
                   {discussions.map((d) => <CarteSujet key={d.id} sujet={d} />)}
                 </div>
-              </section>
+              </Rubrique>
             )}
 
             {publications.length > 0 && (
-              <section className="bloc" aria-labelledby="p-infos">
-                <div className="bloc-head">
-                  <h2 id="p-infos">Le panneau d&apos;affichage</h2>
-                  <Link href="/informations" className="tiny">Toutes</Link>
-                </div>
+              <Rubrique id="p-infos" titre="Le panneau d&apos;affichage"
+                aide="Mairies, associations et collectifs du secteur"
+                icone="M4 4h16v13H4zM8 21h8M12 17v4"
+                lien="/informations" lienLabel="Toutes"
+                raccourcis={[{ href: '/officiel', label: 'Je représente une structure' }]}>
                 <div className="events">
                   {publications.map((i) => <CarteInformation key={i.id} info={i} />)}
                 </div>
-              </section>
+              </Rubrique>
             )}
 
             {agenda.length > 0 && (
-              <section className="bloc" aria-labelledby="p-agenda">
-                <div className="bloc-head">
-                  <h2 id="p-agenda">L&apos;agenda</h2>
-                  <Link href="/evenements" className="tiny">Tous</Link>
-                </div>
+              <Rubrique id="p-agenda" titre="L&apos;agenda"
+                aide="Marchés, fêtes, brocantes et portes ouvertes"
+                icone="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"
+                lien="/evenements" lienLabel="Tous"
+                raccourcis={[{ href: '/evenements/nouveau', label: 'Proposer un événement' }]}>
                 <div className="events">
                   {agenda.map((e) => <CarteEvenement key={e.id} evenement={e} />)}
                 </div>
-              </section>
+              </Rubrique>
             )}
           </>
         )}
 
         {maisons.length > 0 && (
-          <section className="bloc" aria-labelledby="p-maisons">
-            <div className="bloc-head">
-              <h2 id="p-maisons">Les structures du secteur</h2>
-            </div>
+          <Rubrique id="p-maisons" titre="Les structures du secteur"
+            aide="Mairies, associations et collectifs vérifiés"
+            icone="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6">
             <div className="fils">
               {maisons.map((m: any) => (
                 <Link key={m.id} href={`/membre/${m.id}`} className="fil">
@@ -172,7 +178,7 @@ export default async function Place() {
                 </Link>
               ))}
             </div>
-          </section>
+          </Rubrique>
         )}
 
         {connecte && profil && !vide && (

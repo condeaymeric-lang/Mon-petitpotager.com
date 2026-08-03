@@ -4,6 +4,7 @@ import { BarreHaut, BarreBas } from '@/components/Navigation';
 import BarreVisiteur from '@/components/BarreVisiteur';
 import ChoixCommune from '@/components/ChoixCommune';
 import CarteSujet, { THEMES, type SujetProche } from '@/components/CarteSujet';
+import Rubrique from '@/components/Rubrique';
 import { Illustration } from '@/components/Illustrations';
 
 export const dynamic = 'force-dynamic';
@@ -37,22 +38,17 @@ export default async function Bistrot({
           </p>
         </div>
 
-        <div className="filtres-zone">
-          <div className="filters">
-            <Link href="/bistrot" className={`fchip${!theme ? ' on' : ''}`}>Tout</Link>
-            {THEMES.map(([c, l]) => (
-              <Link key={c} href={`/bistrot?theme=${c}`}
-                className={`fchip${theme === c ? ' on' : ''}`}>{l}</Link>
-            ))}
-          </div>
-        </div>
-
-        {connecte && profil && (
-          <Link className="btn btn-p" href="/bistrot/nouveau" style={{ marginBottom: 16 }}>
-            Ouvrir une discussion
-          </Link>
-        )}
-
+        <Rubrique id="b-themes" titre="Les tables du bistrot"
+          aide="Chaque table son sujet. Servez-vous."
+          icone="M6 2h12l-1 9a5 5 0 0 1-10 0ZM8 21h8M12 16v5"
+          lien={connecte && profil ? '/bistrot/nouveau' : undefined}
+          lienLabel="Ouvrir une discussion"
+          raccourcis={[
+            { href: '/bistrot', label: 'Tout', actif: !theme },
+            ...THEMES.map(([c, l]) => ({
+              href: `/bistrot?theme=${c}`, label: l, actif: theme === c,
+            })),
+          ]}>
         {sujets.length > 0 ? (
           <div className="sujets">
             {sujets.map((s) => <CarteSujet key={s.id} sujet={s} />)}
@@ -71,6 +67,7 @@ export default async function Bistrot({
               : <Link className="btn btn-p" href="/inscription">Créer un compte</Link>}
           </div>
         )}
+        </Rubrique>
       </div></div>
       {connecte && <BarreBas />}
     </>

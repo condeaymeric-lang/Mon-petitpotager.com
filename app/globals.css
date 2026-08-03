@@ -442,10 +442,10 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
   .tb-row{gap:22px}
   .mode-sw{display:none}
   .dsk-nav{display:flex;align-items:center;gap:4px}
-  .dsk-nav a{display:flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;font-size:.87rem;font-weight:600;color:var(--ink-soft);position:relative;transition:.15s}
+  .dsk-nav a{display:flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;font-size:.87rem;font-weight:600;color:var(--ink-soft);position:relative;transition:.15s;white-space:nowrap}
   .dsk-nav a svg{stroke:var(--ink-soft);stroke-width:1.9;fill:none}
   .dsk-nav a:hover{background:var(--leaf-soft);color:var(--forest)}
-  .dsk-nav a.on{background:var(--leaf-soft);color:var(--forest)}
+  .dsk-nav a.on{background:var(--leaf-soft);color:var(--forest);box-shadow:inset 0 0 0 1.5px var(--leaf-line)}
   .dsk-nav a.on svg{stroke:var(--forest)}
   .dsk-badge{position:absolute;top:3px;right:5px;min-width:15px;height:15px;border-radius:8px;background:var(--tomato);color:#fff;font-size:.6rem;font-weight:700;display:grid;place-items:center;padding:0 4px}
   .dsk-publier{display:flex;align-items:center;gap:6px;padding:9px 16px;border-radius:999px;background:var(--forest);color:#fff;font-size:.85rem;font-weight:600;flex-shrink:0}
@@ -888,3 +888,53 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .tb-profil-t{display:none;font-size:.82rem;font-weight:600;color:var(--forest);
   max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(min-width:560px){.tb-profil-t{display:block}}
+
+/* ── Le dérouleur « Le village » ── */
+.menu-v{position:relative}
+.menu-v-b{display:flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;
+  font-size:.87rem;font-weight:600;color:var(--ink-soft);white-space:nowrap;
+  min-height:38px;transition:.15s}
+.menu-v-b svg{stroke:currentColor;stroke-width:1.9;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.menu-v-b:hover{background:var(--leaf-soft);color:var(--forest)}
+.menu-v-b.on{background:var(--leaf-soft);color:var(--forest);
+  box-shadow:inset 0 0 0 1.5px var(--leaf-line)}
+.menu-v-b .chev{transition:transform .18s}
+.menu-v-b .chev.ouvert{transform:rotate(180deg)}
+.menu-v-p{position:absolute;top:calc(100% + 8px);left:0;z-index:50;width:286px;
+  background:var(--paper);border:1.5px solid var(--leaf-line);border-radius:var(--r-m);
+  box-shadow:var(--sh-m);padding:6px;display:grid;gap:2px}
+.menu-v-p a{display:flex;align-items:flex-start;gap:11px;padding:10px 11px;
+  border-radius:var(--r-s);min-height:44px;transition:background .15s}
+.menu-v-p a:hover{background:var(--leaf-soft)}
+.menu-v-p a.on{background:var(--leaf-soft)}
+.menu-v-p a svg{stroke:var(--forest-2);stroke-width:1.8;fill:none;flex-shrink:0;
+  stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.menu-v-p a>span{display:block;min-width:0}
+.menu-v-p b{display:block;font-size:.87rem;color:var(--forest);white-space:nowrap}
+.menu-v-p span span{display:block;font-size:.76rem;color:var(--ink-soft);margin-top:1px}
+
+/* ── Titres de rubrique de la place et du bistrot ── */
+.rub{margin-top:30px}
+.rub-head{display:flex;align-items:center;gap:12px;padding:13px 15px;
+  background:linear-gradient(100deg,var(--leaf-soft),var(--cream-2));
+  border:1px solid var(--leaf-line);border-left:5px solid var(--leaf);
+  border-radius:var(--r-m);margin-bottom:13px}
+.rub-ico{flex-shrink:0;width:38px;height:38px;border-radius:50%;background:var(--paper);
+  display:grid;place-items:center;box-shadow:var(--sh-s)}
+.rub-ico svg{stroke:var(--forest);stroke-width:1.9;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.rub-t{flex:1;min-width:0}
+.rub-t h2{font-size:1.08rem;color:var(--forest);line-height:1.25}
+.rub-t p{font-size:.8rem;color:var(--ink-soft);margin-top:2px}
+.rub-lien{flex-shrink:0;font-size:.8rem;font-weight:600;color:var(--forest);
+  padding:8px 10px;border-radius:var(--r-s);min-height:38px;display:flex;align-items:center}
+.rub-lien:hover{background:var(--paper);text-decoration:underline}
+/* Les raccourcis du thème, dépliés sous le titre. */
+.rub-racc{display:flex;flex-wrap:wrap;gap:7px;margin:-4px 0 13px}
+.rub-racc a{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;
+  border-radius:999px;border:1.5px solid var(--line);background:var(--paper);
+  font-size:.8rem;font-weight:600;color:var(--ink-soft);min-height:36px;
+  white-space:nowrap;transition:.15s}
+.rub-racc a:hover{border-color:var(--leaf);color:var(--forest);background:var(--leaf-soft)}
+.rub-racc a.on{border-color:var(--forest);background:var(--forest);color:#fff}

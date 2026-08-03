@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePanier } from '@/components/PanierContext';
 import { creerClient } from '@/lib/supabase-client';
 import { Marque } from './Marque';
@@ -44,6 +44,21 @@ const PLACE = {
   d: 'M3 21h18M6 21V11M18 21V11M4 11h16l-8-6-8 6ZM10 21v-5h4v5',
 };
 
+/** Tout ce qui fait la vie du secteur, sous un même titre : la barre ne
+ *  peut pas aligner huit rubriques sans devenir illisible. */
+const VILLAGE = [
+  { href: '/place', label: 'La place du village', d: 'M3 21h18M6 21V11M18 21V11M4 11h16l-8-6-8 6ZM10 21v-5h4v5',
+    aide: 'Tout ce qui se passe autour de vous' },
+  { href: '/bistrot', label: 'Le bistrot du coin', d: 'M6 2h12l-1 9a5 5 0 0 1-10 0ZM8 21h8M12 16v5',
+    aide: 'Conseils, entraide et discussions' },
+  { href: '/evenements', label: 'Les événements', d: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z',
+    aide: 'Marchés, fêtes, brocantes' },
+  { href: '/informations', label: 'Les informations', d: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM12 16v-5M12 8h.01',
+    aide: 'Mairies, associations et sondages' },
+  { href: '/producteurs', label: 'Les producteurs', d: 'M3 21h18M5 21V9l7-4 7 4v12M10 21v-5h4v5',
+    aide: 'Les fermes de votre secteur' },
+];
+
 /** Non-lus et identité, relus à chaque changement de page. */
 function useMoi() {
   const [n, setN] = useState(0);
@@ -71,6 +86,60 @@ function useMoi() {
   return { nonLus: n, moi };
 }
 
+/** Le titre « Le village » et son dérouleur. */
+function MenuVillage() {
+  const [ouvert, setOuvert] = useState(false);
+  const path = usePathname();
+  const zone = useRef<HTMLDivElement>(null);
+  const actif = VILLAGE.some((v) => path.startsWith(v.href));
+
+  useEffect(() => { setOuvert(false); }, [path]);
+
+  useEffect(() => {
+    if (!ouvert) return;
+    function dehors(e: MouseEvent) {
+      if (!zone.current?.contains(e.target as Node)) setOuvert(false);
+    }
+    function echap(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOuvert(false);
+    }
+    document.addEventListener('mousedown', dehors);
+    document.addEventListener('keydown', echap);
+    return () => {
+      document.removeEventListener('mousedown', dehors);
+      document.removeEventListener('keydown', echap);
+    };
+  }, [ouvert]);
+
+  return (
+    <div className="menu-v" ref={zone}>
+      <button type="button" className={`menu-v-b${actif ? ' on' : ''}`}
+        aria-expanded={ouvert} aria-haspopup="true"
+        onClick={() => setOuvert((v) => !v)}>
+        <Icone d="M3 21h18M6 21V11M18 21V11M4 11h16l-8-6-8 6ZM10 21v-5h4v5" taille={17} />
+        Le village
+        <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"
+          className={ouvert ? 'chev ouvert' : 'chev'}><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+
+      {ouvert && (
+        <div className="menu-v-p" role="menu">
+          {VILLAGE.map((v) => (
+            <Link key={v.href} href={v.href} role="menuitem"
+              className={path.startsWith(v.href) ? 'on' : ''}>
+              <Icone d={v.d} taille={19} />
+              <span>
+                <b>{v.label}</b>
+                <span>{v.aide}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Icone({ d, taille = 21 }: { d: string; taille?: number }) {
   return (
     <svg width={taille} height={taille} viewBox="0 0 24 24">
@@ -96,8 +165,7 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
           <Link href="/" className="brand"><Marque hauteur={46} /></Link>
 
           <nav className="dsk-nav" aria-label="Navigation principale">
-            {[...onglets.filter((o) => o.cle !== 'profil'),
-              ...(modeVendre ? [] : [PLACE, PRODUCTEURS])].map((o) => {
+            {onglets.filter((o) => o.cle !== 'profil').map((o) => {
               const actif = o.href === '/' ? path === '/' : path.startsWith(o.href);
               return (
                 <Link key={o.cle} href={o.href} className={actif ? 'on' : ''}>
@@ -108,6 +176,7 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
                 </Link>
               );
             })}
+            {!modeVendre && <MenuVillage />}
           </nav>
 
           <div className="tb-right">
