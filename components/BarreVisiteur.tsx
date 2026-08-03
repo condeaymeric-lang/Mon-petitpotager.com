@@ -25,15 +25,17 @@ export default function BarreVisiteur({
           <Link href="/" className="brand"><Marque hauteur={46} /></Link>
           <div className="tb-right">
             <nav className="dsk-nav" aria-label="Navigation">
+              <Link href="/place">La place</Link>
+              <Link href="/bistrot">Le bistrot</Link>
               <Link href="/producteurs">Producteurs</Link>
-              <Link href="/evenements">Événements</Link>
               <Link href="/pourquoi">Pourquoi</Link>
             </nav>
             <button type="button" className="loc" onClick={changerCommune}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6FA83A" strokeWidth="2.2">
                 <path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z" /><circle cx="12" cy="10" r="3" />
               </svg>
-              <b>{commune} · {rayonKm} km</b>
+              <b>{commune}</b>
+              <span className="loc-km">{rayonKm} km</span>
             </button>
             <Link href="/inscription" className="dsk-publier">Créer un compte</Link>
           </div>

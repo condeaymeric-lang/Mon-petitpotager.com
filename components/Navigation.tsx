@@ -44,9 +44,10 @@ const PLACE = {
   d: 'M3 21h18M6 21V11M18 21V11M4 11h16l-8-6-8 6ZM10 21v-5h4v5',
 };
 
-/** Nombre de messages non lus, relu à chaque changement de page. */
-function useNonLus() {
+/** Non-lus et identité, relus à chaque changement de page. */
+function useMoi() {
   const [n, setN] = useState(0);
+  const [moi, setMoi] = useState<{ prenom: string; avatar: string | null } | null>(null);
   const path = usePathname();
 
   useEffect(() => {
@@ -55,16 +56,19 @@ function useNonLus() {
     Promise.all([
       sb.rpc('messages_non_lus'),
       sb.rpc('notifications_non_lues'),
-    ]).then(([m, n2]) => {
+      sb.rpc('mon_profil'),
+    ]).then(([m, n2, p]) => {
       if (!vivant) return;
       const a = typeof m.data === 'number' ? m.data : 0;
       const b = typeof n2.data === 'number' ? n2.data : 0;
       setN(a + b);
+      const fiche = Array.isArray(p.data) ? p.data[0] : null;
+      if (fiche) setMoi({ prenom: fiche.prenom, avatar: fiche.avatar_url ?? null });
     });
     return () => { vivant = false; };
   }, [path]);
 
-  return n;
+  return { nonLus: n, moi };
 }
 
 function Icone({ d, taille = 21 }: { d: string; taille?: number }) {
@@ -79,10 +83,11 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
   const path = usePathname();
   const router = useRouter();
   const { nbArticles } = usePanier();
-  const nonLus = useNonLus();
+  const { nonLus, moi } = useMoi();
   const modeVendre = path.startsWith('/vendre');
   const onglets = modeVendre ? ONGLETS.vendre : ONGLETS.acheter;
   const publier = modeVendre ? '/vendre/publier' : '/vendre';
+  const surProfil = path.startsWith('/profil');
 
   return (
     <div className="topbar">
@@ -110,11 +115,25 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
               <svg width="16" height="16" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
               {modeVendre ? 'Publier' : 'Vendre'}
             </Link>
-            <Link href="/profil" className="loc">
+
+            {/* Le secteur mène au réglage du secteur, pas au profil entier :
+                cliquer sur « 20 km » pour trouver son profil n'avait rien
+                d'évident. */}
+            <Link href="/profil#secteur" className="loc" title="Régler ma commune et mon rayon">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6FA83A" strokeWidth="2.2">
                 <path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z" /><circle cx="12" cy="10" r="3" />
               </svg>
-              <b>{commune} · {rayonKm} km</b>
+              <b>{commune}</b>
+              <span className="loc-km">{rayonKm} km</span>
+            </Link>
+
+            <Link href="/profil" className={`tb-profil${surProfil ? ' on' : ''}`}>
+              {moi?.avatar
+                ? <img src={moi.avatar} alt="" className="tb-avatar" />
+                : <span className="tb-avatar tb-avatar-vide">
+                    {moi?.prenom?.[0]?.toUpperCase() ?? '·'}
+                  </span>}
+              <span className="tb-profil-t">{moi?.prenom ?? 'Profil'}</span>
             </Link>
           </div>
         </div>
@@ -130,7 +149,7 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
 export function BarreBas() {
   const path = usePathname();
   const { nbArticles } = usePanier();
-  const nonLus = useNonLus();
+  const { nonLus } = useMoi();
   const modeVendre = path.startsWith('/vendre');
   const cles = modeVendre ? MOBILE.vendre : MOBILE.acheter;
   const onglets = (modeVendre ? ONGLETS.vendre : ONGLETS.acheter)

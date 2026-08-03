@@ -7,8 +7,8 @@ export function PanneauMarque() {
   return (
     <div className="onb-marque">
       <div className="onb-marque-in">
-        <Link href="/" className="brand" style={{ fontSize: '2.1rem' }}>
-          <Marque hauteur={104} signature />
+        <Link href="/" className="brand">
+          <Marque hauteur={168} signature clair />
         </Link>
         <p className="onb-tagline">Cultivons le bon. Partageons le meilleur.</p>
         <ul className="onb-promesses">

@@ -67,7 +67,9 @@ img,svg{display:block;max-width:100%}
 .brand i{font-style:normal;color:var(--forest-2)}
 a.brand{transition:opacity .15s}
 a.brand:hover{opacity:.72}
-.loc{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 11px;max-width:54%;flex-shrink:0}
+.loc{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:7px 12px;min-height:36px;max-width:46%;flex-shrink:1;min-width:0;transition:border-color .15s}
+.loc:hover{border-color:var(--leaf-line)}
+.loc-km{flex-shrink:0;color:var(--ink-soft)}
 .loc b{color:var(--forest);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mode-sw{display:flex;gap:3px;background:#E9E6D9;border-radius:999px;padding:3px;margin-top:9px}
 .mode-sw button{flex:1;padding:8px 10px;border-radius:999px;font-size:.85rem;font-weight:600;color:var(--ink-soft);transition:.18s}
@@ -871,3 +873,18 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 /* Les rubriques du bistrot défilent comme celles de l'accueil. */
 .filtres-zone .filters{scrollbar-width:none}
 .filtres-zone .filters::-webkit-scrollbar{display:none}
+
+/* ── Accès au profil depuis la barre du haut ── */
+.tb-profil{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;
+  border-radius:999px;border:1px solid var(--line);background:var(--paper);
+  min-height:38px;flex-shrink:0;transition:border-color .15s,background .15s}
+.tb-profil:hover{border-color:var(--leaf-line);background:var(--leaf-soft)}
+.tb-profil.on{border-color:var(--forest);background:var(--forest)}
+.tb-profil.on .tb-profil-t{color:#fff}
+.tb-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.tb-avatar-vide{display:grid;place-items:center;background:var(--leaf-soft);
+  color:var(--forest);font-size:.82rem;font-weight:700}
+.tb-profil.on .tb-avatar-vide{background:var(--paper)}
+.tb-profil-t{display:none;font-size:.82rem;font-weight:600;color:var(--forest);
+  max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(min-width:560px){.tb-profil-t{display:block}}

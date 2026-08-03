@@ -38,7 +38,7 @@ export default function PanneauProfil({
 
   return (
     <>
-      <div className="card">
+      <div className="card" id="secteur">
         <h3>Mon secteur</h3>
         {secteur ? (<>
           <p className="muted" style={{ marginTop: 6 }}>
