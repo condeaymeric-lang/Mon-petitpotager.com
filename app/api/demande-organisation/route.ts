@@ -19,7 +19,7 @@ export async function POST(requete: Request) {
     .from('profils').select('prenom').eq('id', user.id).maybeSingle();
 
   const corps = [
-    'Une structure demande à être vérifiée sur monpetitpotager.com.',
+    'Une structure demande à être vérifiée sur mon-petitpotager.com.',
     '',
     `Type : ${type}`,
     `Nom : ${nom}`,

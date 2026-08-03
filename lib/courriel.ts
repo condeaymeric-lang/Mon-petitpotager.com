@@ -10,12 +10,12 @@ export function clientService() {
 }
 
 const EXPEDITEUR = process.env.EXPEDITEUR_COURRIEL
-  ?? 'monpetitpotager.com <onboarding@resend.dev>';
+  ?? 'mon-petitpotager.com <onboarding@resend.dev>';
 
 export const AVERTISSEMENT = [
   '',
   '— — —',
-  "Ce message provient d'une version d'essai de monpetitpotager.com.",
+  "Ce message provient d'une version d'essai de mon-petitpotager.com.",
   'Le site est en construction : aucune somme n\'est facturée, aucun',
   "paiement n'est encaissé, et aucune transaction n'a de valeur",
   'commerciale.',

@@ -5,9 +5,10 @@ import { ToastProvider } from '@/components/Toast';
 import { PanierProvider } from '@/components/PanierContext';
 import BandeauConstruction from '@/components/BandeauConstruction';
 import { ColonnePub } from '@/components/EncartPub';
+import Avis from '@/components/Avis';
 
 export const metadata: Metadata = {
-  title: 'monpetitpotager.com — Cultivons le bon, partageons le meilleur',
+  title: 'mon-petitpotager.com — Cultivons le bon, partageons le meilleur',
   description:
     "La marketplace locale entre jardiniers, producteurs et habitants. Partout en France, jamais plus loin que votre secteur.",
 };
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ToastProvider>
           <PanierProvider>
             <div id="contenu">{children}</div>
+            <Avis />
           </PanierProvider>
         </ToastProvider>
       </body>

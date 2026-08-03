@@ -1,6 +1,6 @@
 import PageLegale from '@/components/PageLegale';
 
-export const metadata = { title: 'Données personnelles — monpetitpotager.com' };
+export const metadata = { title: 'Données personnelles — mon-petitpotager.com' };
 
 export default function Confidentialite() {
   return (

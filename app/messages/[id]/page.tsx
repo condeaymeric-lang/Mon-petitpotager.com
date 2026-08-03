@@ -25,7 +25,7 @@ export default async function PageFil({ params }: { params: { id: string } }) {
   const [{ data: autre }, { data: messages }, { data: annonce }] = await Promise.all([
     sb.from('profils').select('id, prenom, raison_sociale, avatar_url, role').eq('id', autreId).maybeSingle(),
     sb.from('messages_prives')
-      .select('id, auteur_id, texte, prix_propose, created_at')
+      .select('id, auteur_id, texte, prix_propose, remis_le, lu_le, created_at')
       .eq('conversation_id', conv.id).order('created_at'),
     conv.annonce_id
       ? sb.from('annonces').select('id, titre, prix, unite, mode, statut').eq('id', conv.annonce_id).maybeSingle()

@@ -3,7 +3,7 @@ import PiedDePage from '@/components/PiedDePage';
 import FormulaireContact from './FormulaireContact';
 import { Marque } from '@/components/Marque';
 
-export const metadata = { title: 'Contact — monpetitpotager.com' };
+export const metadata = { title: 'Contact — mon-petitpotager.com' };
 
 export default function Contact() {
   return (

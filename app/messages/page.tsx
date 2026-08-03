@@ -41,6 +41,9 @@ export default async function Messages() {
   // la lecture.
   if (avis.some((n) => !n.lu_le)) await sb.rpc('marquer_notifications_lues');
 
+  // Ouvrir la messagerie vaut réception : l'expéditeur voit « Remis ».
+  await sb.rpc('marquer_remis');
+
   return (
     <>
       <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />

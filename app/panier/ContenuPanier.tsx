@@ -390,7 +390,7 @@ export default function ContenuPanier({
       <div className="avert" role="note">
         <b>Commande de test. Aucune somme ne sera facturée ni encaissée.</b>
         <p>
-          monpetitpotager.com est en construction. Le paiement en ligne n&apos;est pas
+          mon-petitpotager.com est en construction. Le paiement en ligne n&apos;est pas
           branché, aucun prélèvement n&apos;est effectué, et aucune transaction
           conclue ici n&apos;a de valeur commerciale. Les montants affichés servent
           uniquement à éprouver le fonctionnement du service. Les courriels envoyés

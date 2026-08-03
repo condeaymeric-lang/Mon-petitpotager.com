@@ -139,7 +139,7 @@ export default function Liste({
                 {a.est_lot && <span className="badge b-pro" style={{ marginLeft: 7 }}>Panier</span>}
               </h4>
               <p>
-                <Link href={`/membre/${a.vendeur_id}`} className="lien-membre">{a.vendeur_prenom}</Link>
+                <Link href={`/moderation/membre/${a.vendeur_id}`} className="lien-membre">{a.vendeur_prenom}</Link>
                 {a.vendeur_role === 'pro' ? ' (pro)' : ''} · {a.commune} · {jour(a.created_at)}
                 {' · '}{a.mode === 'vente' ? `${eur(a.prix)} / ${a.unite}`
                   : a.mode === 'troc' ? 'Troc' : 'Don'}

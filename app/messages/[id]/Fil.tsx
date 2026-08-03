@@ -10,6 +10,8 @@ export interface MessagePrive {
   auteur_id: string;
   texte: string;
   prix_propose: number | null;
+  remis_le: string | null;
+  lu_le: string | null;
   created_at: string;
 }
 
@@ -63,10 +65,16 @@ export default function Fil({
     const sb = creerClient();
     const t = setInterval(async () => {
       const { data } = await sb.from('messages_prives')
-        .select('id, auteur_id, texte, prix_propose, created_at')
+        .select('id, auteur_id, texte, prix_propose, remis_le, lu_le, created_at')
         .eq('conversation_id', conversationId)
         .order('created_at');
-      if (data && data.length !== messages.length) {
+      if (!data) return;
+      // On rafraîchit aussi quand seuls les accusés ont changé : c'est
+      // ce qui fait passer « remis » à « lu » sous l'œil de l'expéditeur.
+      const change = data.length !== messages.length
+        || JSON.stringify(data.map((m: any) => [m.remis_le, m.lu_le]))
+           !== JSON.stringify(messages.map((m) => [m.remis_le, m.lu_le]));
+      if (change) {
         setMessages(data as MessagePrive[]);
         await sb.rpc('marquer_lus', { p_conversation: conversationId });
       }
@@ -85,7 +93,7 @@ export default function Fil({
     const { data, error } = await sb.from('messages_prives').insert({
       conversation_id: conversationId, auteur_id: moiId, texte: t,
       prix_propose: proposePrix ? p : null,
-    }).select('id, auteur_id, texte, prix_propose, created_at').single();
+    }).select('id, auteur_id, texte, prix_propose, remis_le, lu_le, created_at').single();
 
     setEnvoi(false);
     if (error || !data) { setErreur("Le message n'est pas parti. Réessayez."); return; }
@@ -119,7 +127,19 @@ export default function Fil({
                   <span className="bulle-prix">Proposition : {eur(+m.prix_propose)}</span>
                 )}
                 <p>{m.texte}</p>
-                <span className="bulle-h">{heure(m.created_at)}</span>
+                <span className="bulle-h">
+                  {heure(m.created_at)}
+                  {mien && (
+                    <span className="bulle-etat">
+                      {m.lu_le ? 'Lu' : m.remis_le ? 'Remis' : 'Envoyé'}
+                      <svg width="15" height="11" viewBox="0 0 22 12" aria-hidden="true"
+                        className={m.lu_le ? 'coche coche-lu' : 'coche'}>
+                        <path d="M1 6.5 4.5 10 11 2" />
+                        {(m.remis_le || m.lu_le) && <path d="M9 6.5 12.5 10 19 2" />}
+                      </svg>
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
           );

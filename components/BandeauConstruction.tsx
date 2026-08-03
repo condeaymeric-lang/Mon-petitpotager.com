@@ -10,7 +10,7 @@ export default function BandeauConstruction() {
     <div className="bandeau" role="status">
       <p>
         <b>Site en construction — les inscriptions ne sont pas ouvertes.</b>{' '}
-        monpetitpotager.com est en cours de développement et n&apos;est pas un service
+        mon-petitpotager.com est en cours de développement et n&apos;est pas un service
         fonctionnel. Le paiement en ligne n&apos;est pas actif, aucune commande
         n&apos;est réellement traitée, et les comptes comme les données sont des
         éléments de test qui peuvent être effacés à tout moment.{' '}

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
---  monpetitpotager.com — schéma de base de données
+--  mon-petitpotager.com — schéma de base de données
 --  À coller dans Supabase → SQL Editor → Run
 --  Idempotent : peut être relancé sans casser l'existant.
 -- ═══════════════════════════════════════════════════════════════
@@ -2410,4 +2410,138 @@ returns table (
     left join secteurs s on s.code_insee = p.secteur
    where est_moderateur() and d.statut = 'en_attente'
    order by 8;
+$$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  MODÉRATION DES PROFILS
+--  La modération corrige un profil comme elle corrige une annonce :
+--  un prénom insultant, une présentation déplacée, une commune
+--  manifestement fausse. Les colonnes sensibles restent hors de
+--  portée : solde de points, vérification, droits.
+-- ═══════════════════════════════════════════════════════════════
+drop policy if exists maj_profil on profils;
+create policy maj_profil on profils for update
+  using (auth.uid() = id or est_moderateur());
+
+/**
+ * Statuts qu'un membre ne peut pas s'accorder : vérification
+ * professionnelle et vérification de structure.
+ */
+create or replace function moderer_statuts_profil(
+  p_profil uuid, p_pro_verifie boolean, p_organisation_verifiee boolean, p_motif text
+) returns void as $$
+begin
+  if not est_moderateur() then
+    raise exception 'Action réservée à la modération.' using errcode = 'check_violation';
+  end if;
+  if coalesce(length(trim(p_motif)), 0) < 3 then
+    raise exception 'Un motif est obligatoire.' using errcode = 'check_violation';
+  end if;
+
+  update public.profils
+     set pro_verifie = coalesce(p_pro_verifie, pro_verifie),
+         organisation_verifiee = coalesce(p_organisation_verifiee, organisation_verifiee),
+         updated_at = now()
+   where id = p_profil;
+
+  insert into public.journal_moderation
+    (moderateur_id, annonce_id, titre, vendeur_id, action, motif)
+    values (auth.uid(), null,
+      'Profil : ' || (select prenom from public.profils where id = p_profil),
+      p_profil, 'corrigee', trim(p_motif));
+end $$ language plpgsql security definer set search_path = public;
+
+/** Fiche complète d'un membre, pour l'écran de modération. */
+create or replace function profil_pour_moderation(p_profil uuid)
+returns setof profils as $$
+  select * from public.profils where est_moderateur() and id = p_profil;
+$$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  ACCUSÉS DE RÉCEPTION
+--  Un message passe par trois états : envoyé, remis quand le
+--  destinataire a reçu le fil sur son appareil, lu quand il a ouvert
+--  la conversation.
+-- ═══════════════════════════════════════════════════════════════
+alter table messages_prives add column if not exists remis_le timestamptz;
+
+/** Marque comme remis tout ce qui attend le membre connecté. */
+create or replace function marquer_remis()
+returns int as $$
+declare v_n int;
+begin
+  update public.messages_prives m set remis_le = now()
+    from public.conversations c
+   where c.id = m.conversation_id
+     and auth.uid() in (c.membre_min, c.membre_max)
+     and m.auteur_id <> auth.uid()
+     and m.remis_le is null;
+  get diagnostics v_n = row_count;
+  return v_n;
+end $$ language plpgsql security definer set search_path = public;
+
+-- La lecture vaut remise : on ne peut pas lire sans avoir reçu.
+create or replace function marquer_lus(p_conversation uuid)
+returns void as $$
+  update messages_prives m set lu_le = now(), remis_le = coalesce(m.remis_le, now())
+    from conversations c
+   where c.id = m.conversation_id
+     and m.conversation_id = p_conversation
+     and auth.uid() in (c.membre_min, c.membre_max)
+     and m.auteur_id <> auth.uid()
+     and m.lu_le is null;
+$$ language sql security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  NOUVEAUTÉS DU SECTEUR
+--  De quoi alimenter les avis affichés en direct : nouveaux
+--  messages, informations, et annonces susceptibles d'intéresser.
+--  Les suggestions reposent sur ce que la personne a déjà acheté ou
+--  publié, jamais sur des données qu'elle n'a pas fournies.
+-- ═══════════════════════════════════════════════════════════════
+create or replace function nouveautes(p_depuis timestamptz)
+returns table (
+  genre text, id uuid, titre text, apercu text, lien text, quand timestamptz
+) as $$
+  with moi as (
+    select p.id, p.rayon_km, s.lat, s.lon
+      from profils p join secteurs s on s.code_insee = p.secteur
+     where p.id = auth.uid()
+  ),
+  -- Ce qui intéresse : les produits déjà achetés ou déjà publiés.
+  gouts as (
+    select distinct l.titre as libelle
+      from lignes_commande l join commandes c on c.id = l.commande_id
+     where c.acheteur_id = auth.uid()
+    union
+    select distinct a.titre from annonces a where a.vendeur_id = auth.uid()
+  )
+  select 'message', m.id, coalesce(pr.raison_sociale, pr.prenom),
+         left(m.texte, 120), '/messages/' || c.id, m.created_at
+    from messages_prives m
+    join conversations c on c.id = m.conversation_id
+    join profils pr on pr.id = m.auteur_id
+   where auth.uid() in (c.membre_min, c.membre_max)
+     and m.auteur_id <> auth.uid() and m.created_at > p_depuis
+  union all
+  select 'info', n.id, n.titre, n.apercu, n.lien, n.created_at
+    from notifications n
+   where n.profil_id = auth.uid() and n.created_at > p_depuis
+  union all
+  select 'annonce', a.id,
+         a.titre || coalesce(' — ' || v.nom, ''),
+         coalesce(pr.raison_sociale, pr.prenom) || ' · ' || a.commune,
+         '/annonce/' || a.id, a.created_at
+    from annonces a
+    join profils pr on pr.id = a.vendeur_id
+    left join varietes v on v.id = a.variete_id
+    cross join moi
+   where a.created_at > p_depuis
+     and a.vendeur_id <> auth.uid()
+     and a.statut = 'en_ligne' and a.quantite > 0
+     and st_dwithin(a.geo, st_point(moi.lon, moi.lat)::geography, moi.rayon_km * 1000)
+     and (exists (select 1 from gouts g where g.libelle = a.titre)
+          or a.est_lot)
+   order by 6 desc
+   limit 12;
 $$ language sql stable security definer set search_path = public;

@@ -6,8 +6,10 @@ import { useToast } from '@/components/Toast';
 import { compresserImage } from '@/lib/utils';
 import type { Profil, Role } from '@/lib/types';
 
-export default function ModifierProfil({ profil }: { profil: Profil }) {
-  const [ouvert, setOuvert] = useState(false);
+export default function ModifierProfil({
+  profil, ouvertParDefaut = false,
+}: { profil: Profil; ouvertParDefaut?: boolean }) {
+  const [ouvert, setOuvert] = useState(ouvertParDefaut);
   const [prenom, setPrenom] = useState(profil.prenom);
   const [telephone, setTelephone] = useState(profil.telephone ?? '');
   const [bio, setBio] = useState(profil.bio ?? '');

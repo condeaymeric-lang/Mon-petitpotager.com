@@ -1,6 +1,6 @@
 import PageLegale from '@/components/PageLegale';
 
-export const metadata = { title: 'Mentions légales — monpetitpotager.com' };
+export const metadata = { title: 'Mentions légales — mon-petitpotager.com' };
 
 export default function MentionsLegales() {
   return (

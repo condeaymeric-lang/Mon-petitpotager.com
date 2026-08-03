@@ -31,10 +31,10 @@ export async function POST(requete: Request) {
 
   const compte = genre === 'compte';
   const sujet = compte
-    ? (accepte ? 'Votre compte monpetitpotager.com est activé'
-               : 'Votre inscription à monpetitpotager.com')
-    : (accepte ? 'Votre structure est vérifiée sur monpetitpotager.com'
-               : 'Votre demande de structure sur monpetitpotager.com');
+    ? (accepte ? 'Votre compte mon-petitpotager.com est activé'
+               : 'Votre inscription à mon-petitpotager.com')
+    : (accepte ? 'Votre structure est vérifiée sur mon-petitpotager.com'
+               : 'Votre demande de structure sur mon-petitpotager.com');
 
   const corps = [
     `Bonjour ${p?.prenom ?? ''},`.trim(),

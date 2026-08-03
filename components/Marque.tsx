@@ -15,7 +15,7 @@ export function Marque({
   return (
     <img
       src={src}
-      alt="monpetitpotager.com"
+      alt="mon-petitpotager.com"
       width={Math.round(hauteur * ratio)}
       height={hauteur}
       className={className}

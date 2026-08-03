@@ -1,14 +1,14 @@
 import PageLegale from '@/components/PageLegale';
 import { eur, FRAIS_SERVICE, RAYON_DEFAUT, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
 
-export const metadata = { title: 'CGU et CGV — monpetitpotager.com' };
+export const metadata = { title: 'CGU et CGV — mon-petitpotager.com' };
 
 export default function Cgu() {
   return (
     <PageLegale titre="Conditions générales" maj="2 août 2026">
       <h2>1. Objet</h2>
       <p>
-        monpetitpotager.com est un service de mise en relation entre habitants
+        mon-petitpotager.com est un service de mise en relation entre habitants
         d&apos;un même secteur : jardiniers amateurs, producteurs professionnels et
         acheteurs. L&apos;éditeur n&apos;est ni vendeur, ni producteur : il fournit
         l&apos;outil qui permet aux membres d&apos;échanger entre eux.

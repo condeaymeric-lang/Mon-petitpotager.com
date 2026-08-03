@@ -129,7 +129,7 @@ export default function FileAttente({ file }: { file: Attente[] }) {
           <div className="line" style={{ border: 0, padding: 0 }}>
             <div className="line-b">
               <h4>
-                <Link href={`/membre/${a.profil_id}`}>{a.prenom}</Link>
+                <Link href={`/moderation/membre/${a.profil_id}`}>{a.prenom}</Link>
                 <span className={`badge ${a.genre === 'organisation' ? 'b-pro' : 'b-am'}`}
                   style={{ marginLeft: 7 }}>
                   {a.genre === 'organisation' ? 'Demande de structure' : 'Inscription'}
