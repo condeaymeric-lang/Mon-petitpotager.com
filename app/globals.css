@@ -616,23 +616,21 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 @media(min-width:560px){.pub-banniere{flex-direction:row;gap:16px;text-align:left}
   .pub-banniere p{flex:1}}
 .rail{display:none}
-/* Colonnes latérales : étroites, écartées du contenu, et jamais de
-   barre de défilement — une colonne qui défile est une colonne trop
-   petite pour ce qu'on y met. */
-@media(min-width:1400px){
-  /* Le bandeau de construction et la barre du haut occupent le sommet :
-     la colonne démarre en dessous, sinon elle passe dessous et paraît
-     coupée. */
-  .rail{display:block;position:fixed;top:176px;width:196px;z-index:5}
-  .rail-g{left:max(16px,calc(50vw - 724px))}
-  .rail-d{right:max(16px,calc(50vw - 724px))}
+/* Colonnes latérales : elles n'apparaissent que lorsqu'il y a vraiment
+   la place, sinon les noms se coupent en trois lignes. La largeur du
+   contenu étant de 1020 px, il faut 1600 px pour loger deux colonnes
+   de 244 px sans serrer. */
+@media(min-width:1600px){
+  .rail{display:block;position:fixed;top:176px;width:244px;z-index:5}
+  .rail-g{left:max(16px,calc(50vw - 774px))}
+  .rail-d{right:max(16px,calc(50vw - 774px))}
   .rail .pub{min-height:320px}
   .classement-fil{display:none}
 }
-@media(min-width:1680px){
-  .rail{width:216px}
-  .rail-g{left:calc(50vw - 780px)}
-  .rail-d{right:calc(50vw - 780px)}
+@media(min-width:1800px){
+  .rail{width:272px}
+  .rail-g{left:calc(50vw - 830px)}
+  .rail-d{right:calc(50vw - 830px)}
 }
 
 /* ── Classement des voisins ── */
@@ -641,20 +639,20 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .card.classement{padding:18px}
 .classement h3{font-size:1rem;line-height:1.25}
 .clst{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:3px}
-.clst a{display:grid;grid-template-columns:18px 30px 1fr auto;align-items:center;
-  column-gap:9px;padding:7px 5px;border-radius:9px;min-height:44px;transition:background .15s}
+.clst a{display:grid;grid-template-columns:20px 32px 1fr auto;align-items:center;
+  column-gap:10px;padding:8px 6px;border-radius:9px;min-height:46px;transition:background .15s}
 .clst a:hover{background:var(--cream)}
 .clst-rang{font-size:.85rem;font-weight:700;color:var(--ink-soft);
   text-align:center;font-variant-numeric:tabular-nums}
 .clst-podium{color:var(--bark)}
-.clst-photo{width:30px;height:30px;border-radius:50%;object-fit:cover}
+.clst-photo{width:32px;height:32px;border-radius:50%;object-fit:cover}
 .clst-photo-vide{display:grid;place-items:center;background:var(--leaf-soft);
   color:var(--forest);font-size:.82rem;font-weight:700}
 /* Les noms passent à la ligne plutôt que d'être coupés : un nom tronqué
    ne sert à personne. */
 .clst-nom{min-width:0}
-.clst-nom b{display:block;font-size:.87rem;line-height:1.25;color:var(--forest);
-  overflow-wrap:anywhere}
+.clst-nom b{font-size:.87rem;line-height:1.25;color:var(--forest);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .clst-nom span{display:block;font-size:.75rem;line-height:1.3;color:var(--ink-soft);
   margin-top:1px}
 .clst-pts{font-size:.85rem;font-weight:700;color:var(--forest-2);
