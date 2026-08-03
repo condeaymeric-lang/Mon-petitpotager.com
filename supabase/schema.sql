@@ -2910,3 +2910,43 @@ returns table (id uuid, titre text, variete text, prix numeric, unite text, mode
    order by a.created_at desc
    limit 40;
 $$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  POINTS SUSPENDUS SUR LES ACHATS
+--  Les achats ne rapportent plus de points pour le moment. Seul le
+--  service rendu en point relais en donne encore : c'est un dédommagement,
+--  pas une récompense d'achat.
+-- ═══════════════════════════════════════════════════════════════
+create or replace function crediter_retrait(p_commande uuid)
+returns int as $$
+declare
+  v_profil uuid := auth.uid();
+  v_cmd record;
+begin
+  if v_profil is null then
+    raise exception 'Connexion requise.' using errcode = 'check_violation';
+  end if;
+
+  select id, acheteur_id, statut, mode_retrait, relais_id, reference
+    into v_cmd from public.commandes where id = p_commande;
+
+  if v_cmd.id is null or v_cmd.acheteur_id <> v_profil then
+    raise exception 'Commande introuvable.' using errcode = 'check_violation';
+  end if;
+  if v_cmd.statut <> 'retiree' then
+    raise exception 'Le retrait n''est pas confirmé.' using errcode = 'check_violation';
+  end if;
+  if exists (select 1 from public.mouvements_points
+              where commande_id = p_commande and montant > 0) then
+    return 0;
+  end if;
+
+  -- L'hôte du point relais reste dédommagé du service rendu.
+  if v_cmd.mode_retrait = 'relais' and v_cmd.relais_id is not null
+     and v_cmd.relais_id <> v_profil then
+    perform public.ajouter_points(v_cmd.relais_id, 20,
+      'Colis remis en point relais — ' || v_cmd.reference, p_commande);
+  end if;
+
+  return 0;
+end $$ language plpgsql security definer set search_path = public;

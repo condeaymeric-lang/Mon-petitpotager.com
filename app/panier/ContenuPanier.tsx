@@ -267,7 +267,7 @@ export default function ContenuPanier({
             </div>
           ) : (
             <p className="tiny" style={{ marginTop: 10 }}>
-              Aucun bon disponible. Les points se cumulent sur vos achats retirés et en tenant un point relais.
+              Aucun bon disponible. Le cumul de points est suspendu pendant la phase de construction.
             </p>
           )}
           {bonChoisi && bonChoisi.montant > sousTotal && (

@@ -9,7 +9,7 @@ const RAISONS = [
     d: "Avis, historique de ventes, badge vérifié pour les professionnels. Un vendeur qui triche perd sa réputation, et il le sait. C'est ce qui rend la confiance possible entre inconnus.",
     p: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8' },
   { t: 'Moins cher que la grande surface',
-    d: "Sans centrale d'achat, sans transport longue distance et sans marge de distributeur, les prix sont en moyenne 20 à 40 % en dessous. Et chaque commande retirée vous rapporte des points, convertibles en bons d'achat.",
+    d: "Sans centrale d'achat, sans transport longue distance et sans marge de distributeur, les prix sont en moyenne 20 à 40 % en dessous.",
     p: 'M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' },
   { t: 'Un revenu réel pour vos voisins',
     d: "Le jardinier qui vend son surplus, le maraîcher qui remplit sa semaine, l'habitant qui tient un point relais : chacun touche directement. Rien ne part dans une marge intermédiaire.",
