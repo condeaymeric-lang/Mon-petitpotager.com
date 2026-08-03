@@ -627,7 +627,10 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
    contenu étant de 1020 px, il faut 1600 px pour loger deux colonnes
    de 244 px sans serrer. */
 @media(min-width:1600px){
-  .rail{display:block;position:fixed;top:176px;width:244px;z-index:5}
+  /* Le bandeau de construction occupe le sommet tant qu'on n'a pas
+     défilé : la colonne démarre en dessous pour ne jamais être
+     recouverte. */
+  .rail{display:block;position:fixed;top:196px;width:244px;z-index:5}
   .rail-g{left:max(16px,calc(50vw - 774px))}
   .rail-d{right:max(16px,calc(50vw - 774px))}
   .rail .pub{min-height:320px}
@@ -676,7 +679,11 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .saut-contenu{position:absolute;left:-9999px;top:0;z-index:100;padding:11px 18px;
   background:var(--forest);color:#fff;border-radius:0 0 var(--r-s) 0;font-weight:600}
 .saut-contenu:focus{left:0}
-@media(min-width:1100px){.app,.topbar-in{max-width:1020px}}
+@media(min-width:1100px){.app{max-width:1020px}.topbar-in{max-width:1080px}}
+/* Au-delà, la barre s'élargit plus vite que le contenu : c'est ce qui
+   lui permet de tenir sur une seule ligne. Sur deux lignes, elle
+   recouvrait le haut des colonnes latérales. */
+@media(min-width:1320px){.topbar-in{max-width:1300px}}
 
 /* Renseignements complémentaires d'une fiche */
 .fiche-dl{margin-top:10px;display:grid;gap:9px}
