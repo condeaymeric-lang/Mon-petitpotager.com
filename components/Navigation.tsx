@@ -18,8 +18,6 @@ const ONGLETS = {
     { href: '/vendre', cle: 'vendre', label: 'Tableau', d: 'M3 3v18h18M7 15l4-5 3 3 5-7' },
     { href: '/vendre/commandes', cle: 'cmd-vendeur', label: 'Commandes', d: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0' },
     { href: '/messages', cle: 'messages', label: 'Messages', d: 'M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4.2-1L3 20l1.1-4.1A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z' },
-    { href: '/vendre/annonces', cle: 'annonces', label: 'Annonces', d: 'M4 4h16v16H4zM4 9h16M9 9v11' },
-    { href: '/vendre/ventes', cle: 'ventes', label: 'Ventes', d: 'M18.5 6.5a7 7 0 1 0 0 11M4 10.5h11M4 14h9.5' },
     { href: '/vendre/gestion', cle: 'gestion', label: 'Gestion', d: 'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4M9 3v4h6V3M8 12h8M8 16h5' },
     { href: '/profil', cle: 'profil', label: 'Profil', d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8' },
   ],
@@ -43,6 +41,16 @@ const PLACE = {
   href: '/place', cle: 'place', label: 'La place',
   d: 'M3 21h18M6 21V11M18 21V11M4 11h16l-8-6-8 6ZM10 21v-5h4v5',
 };
+
+/** Ce que le vendeur consulte moins souvent, sous un même titre. */
+const BOUTIQUE = [
+  { href: '/vendre/annonces', label: 'Mes annonces', d: 'M4 4h16v16H4zM4 9h16M9 9v11',
+    aide: 'Modifier, retirer, réapprovisionner' },
+  { href: '/vendre/ventes', label: 'Mes ventes', d: 'M18.5 6.5a7 7 0 1 0 0 11M4 10.5h11M4 14h9.5',
+    aide: 'Chiffre d\u2019affaires et versements' },
+  { href: '/vendre/publier', label: 'Publier une annonce', d: 'M12 5v14M5 12h14',
+    aide: 'Un produit ou un panier composé' },
+];
 
 /** Tout ce qui fait la vie du secteur, sous un même titre : la barre ne
  *  peut pas aligner huit rubriques sans devenir illisible. */
@@ -86,12 +94,15 @@ function useMoi() {
   return { nonLus: n, moi };
 }
 
-/** Le titre « Le village » et son dérouleur. */
-function MenuVillage() {
+/** Un titre de rubrique et son dérouleur. */
+function Menu({ titre, icone, entrees }: {
+  titre: string; icone: string;
+  entrees: { href: string; label: string; d: string; aide: string }[];
+}) {
   const [ouvert, setOuvert] = useState(false);
   const path = usePathname();
   const zone = useRef<HTMLDivElement>(null);
-  const actif = VILLAGE.some((v) => path.startsWith(v.href));
+  const actif = entrees.some((v) => path.startsWith(v.href));
 
   useEffect(() => { setOuvert(false); }, [path]);
 
@@ -116,15 +127,15 @@ function MenuVillage() {
       <button type="button" className={`menu-v-b${actif ? ' on' : ''}`}
         aria-expanded={ouvert} aria-haspopup="true"
         onClick={() => setOuvert((v) => !v)}>
-        <Icone d="M3 21h18M6 21V11M18 21V11M4 11h16l-8-6-8 6ZM10 21v-5h4v5" taille={17} />
-        Le village
+        <Icone d={icone} taille={17} />
+        {titre}
         <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"
           className={ouvert ? 'chev ouvert' : 'chev'}><path d="m6 9 6 6 6-6" /></svg>
       </button>
 
       {ouvert && (
         <div className="menu-v-p" role="menu">
-          {VILLAGE.map((v) => (
+          {entrees.map((v) => (
             <Link key={v.href} href={v.href} role="menuitem"
               className={path.startsWith(v.href) ? 'on' : ''}>
               <Icone d={v.d} taille={19} />
@@ -176,7 +187,11 @@ export function BarreHaut({ commune, rayonKm }: { commune: string; rayonKm: numb
                 </Link>
               );
             })}
-            {!modeVendre && <MenuVillage />}
+            {modeVendre
+              ? <Menu titre="Ma boutique" entrees={BOUTIQUE}
+                  icone="M3 9h18l-1.5 11a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8ZM8 9V6a4 4 0 0 1 8 0v3" />
+              : <Menu titre="Le village" entrees={VILLAGE}
+                  icone="M3 21h18M6 21V11M18 21V11M4 11h16l-8-6-8 6ZM10 21v-5h4v5" />}
           </nav>
 
           <div className="tb-right">

@@ -62,7 +62,7 @@ img,svg{display:block;max-width:100%}
 .topbar{position:sticky;top:0;z-index:40;background:rgba(247,244,234,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .topbar-in{max-width:900px;margin:0 auto;padding:10px 16px}
 .tb-row{display:flex;align-items:center;gap:10px}
-.brand{display:flex;align-items:center;gap:6px;line-height:0}
+.brand{display:flex;align-items:center;gap:6px;line-height:0;flex-shrink:0}
 .brand img{max-width:100%;height:auto}
 .brand i{font-style:normal;color:var(--forest-2)}
 a.brand{transition:opacity .15s}
@@ -441,7 +441,13 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
   .app,.topbar-in{max-width:1080px}
   .tb-row{gap:22px}
   .mode-sw{display:none}
-  .dsk-nav{display:flex;align-items:center;gap:4px}
+  /* La barre porte le logo, les rubriques, le bouton de publication, le
+     secteur et le profil : c'est la rangée de rubriques qui cède, jamais
+     le logo, qui reste le retour à l'accueil. */
+  .dsk-nav{display:flex;align-items:center;gap:4px;flex-shrink:1;min-width:0;
+    overflow-x:auto;scrollbar-width:none}
+  .dsk-nav::-webkit-scrollbar{display:none}
+  .dsk-nav>a,.dsk-nav .menu-v{flex-shrink:0}
   .dsk-nav a{display:flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;font-size:.87rem;font-weight:600;color:var(--ink-soft);position:relative;transition:.15s;white-space:nowrap}
   .dsk-nav a svg{stroke:var(--ink-soft);stroke-width:1.9;fill:none}
   .dsk-nav a:hover{background:var(--leaf-soft);color:var(--forest)}
