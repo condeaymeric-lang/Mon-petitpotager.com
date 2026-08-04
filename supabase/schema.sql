@@ -2159,31 +2159,6 @@ returns table (
    limit p_limite;
 $$ language sql stable security definer set search_path = public;
 
-create or replace function sondages_autour(
-  p_lat double precision, p_lon double precision,
-  p_rayon_km int default 20, p_limite int default 20
-)
-returns table (
-  id uuid, question text, precisions text, choix_multiple boolean,
-  clos_le timestamptz, created_at timestamptz, distance_km numeric,
-  auteur_id uuid, auteur_nom text, auteur_type text, auteur_verifiee boolean,
-  nb_votants int, a_vote boolean
-) as $$
-  select s.id, s.question, s.precisions, s.choix_multiple,
-         s.clos_le, s.created_at,
-         round((st_distance(s.geo, st_point(p_lon, p_lat)::geography) / 1000)::numeric, 1),
-         pr.id, coalesce(pr.organisation_nom, pr.prenom), pr.organisation,
-         pr.organisation_verifiee,
-         (select count(distinct v.profil_id)::int from sondage_votes v where v.sondage_id = s.id),
-         exists (select 1 from sondage_votes v
-                  where v.sondage_id = s.id and v.profil_id = auth.uid())
-    from sondages s
-    join profils pr on pr.id = s.auteur_id
-   where st_dwithin(s.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
-   order by (s.clos_le is null or s.clos_le > now()) desc, s.created_at desc
-   limit p_limite;
-$$ language sql stable security definer set search_path = public;
-
 /**
  * Résultats d'un sondage, en temps réel.
  * Les totaux sont publics, les votes individuels ne le sont pas :
