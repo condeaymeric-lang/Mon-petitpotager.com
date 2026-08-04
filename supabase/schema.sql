@@ -1606,7 +1606,7 @@ create or replace function moderer_annonce(
 ) returns void as $$
 declare v_a record;
 begin
-  if not est_moderateur() then
+  if not peut_moderer('annonces') then
     raise exception 'Action réservée à la modération.' using errcode = 'check_violation';
   end if;
   if p_motif is null or length(trim(p_motif)) < 3 then
@@ -2317,7 +2317,7 @@ create or replace function repondre_demande_organisation(
 ) returns void as $$
 declare v_d record;
 begin
-  if not est_moderateur() then
+  if not peut_moderer('comptes') then
     raise exception 'Action réservée à la modération.' using errcode = 'check_violation';
   end if;
 
@@ -2362,7 +2362,7 @@ create or replace function valider_compte(
   p_profil uuid, p_accepte boolean, p_motif text default null
 ) returns void as $$
 begin
-  if not est_moderateur() then
+  if not peut_moderer('comptes') then
     raise exception 'Action réservée à la modération.' using errcode = 'check_violation';
   end if;
   if not p_accepte and coalesce(length(trim(p_motif)), 0) < 3 then
@@ -2431,7 +2431,7 @@ create or replace function moderer_statuts_profil(
   p_profil uuid, p_pro_verifie boolean, p_organisation_verifiee boolean, p_motif text
 ) returns void as $$
 begin
-  if not est_moderateur() then
+  if not peut_moderer('membres') then
     raise exception 'Action réservée à la modération.' using errcode = 'check_violation';
   end if;
   if coalesce(length(trim(p_motif)), 0) < 3 then
@@ -2531,7 +2531,7 @@ returns table (
   select 'annonce', a.id,
          a.titre || coalesce(' — ' || v.nom, ''),
          coalesce(pr.raison_sociale, pr.prenom) || ' · ' || a.commune,
-         '/annonce/' || a.id, a.created_at
+         ('/annonce/' || a.id)::text, a.created_at
     from annonces a
     join profils pr on pr.id = a.vendeur_id
     left join varietes v on v.id = a.variete_id
@@ -2791,7 +2791,7 @@ begin
   if v_c.id is null then
     raise exception 'Commentaire introuvable.' using errcode = 'check_violation';
   end if;
-  if not (est_moderateur() or auth.uid() = v_c.proprio) then
+  if not (peut_moderer('commentaires') or auth.uid() = v_c.proprio) then
     raise exception 'Vous ne pouvez pas modérer ce commentaire.' using errcode = 'check_violation';
   end if;
   if p_masque and coalesce(length(trim(p_motif)), 0) < 3 then
@@ -3020,5 +3020,507 @@ returns table (
     join profils pr on pr.id = s.auteur_id
    where st_dwithin(s.geo, st_point(p_lon, p_lat)::geography, p_rayon_km * 1000)
    order by (s.clos_le is null or s.clos_le > now()) desc, s.created_at desc
+   limit p_limite;
+$$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  DROITS DE MODÉRATION
+--  Modérer n'est pas une seule chose. Relire les annonces, valider
+--  les inscriptions et distribuer les droits ne demandent ni la même
+--  compétence ni la même confiance. Chaque domaine s'accorde donc
+--  séparément. Le drapeau « moderateur » subsiste, tenu à jour
+--  automatiquement : il vaut « détient au moins un droit ».
+-- ═══════════════════════════════════════════════════════════════
+alter table profils add column if not exists droits_moderation text[] default '{}' not null;
+
+/** Les huit domaines, dans l'ordre où l'interface les présente. */
+create or replace function domaines_moderation() returns text[] as $$
+  select array['annonces','evenements','informations','discussions',
+               'commentaires','comptes','membres','droits']::text[];
+$$ language sql immutable;
+
+-- Reprise : un modérateur d'avant ce découpage garde tout.
+update profils set droits_moderation = domaines_moderation()
+ where moderateur = true and cardinality(droits_moderation) = 0;
+
+-- Le drapeau ne se saisit plus à la main : il découle des droits.
+create or replace function synchroniser_moderateur() returns trigger as $$
+begin
+  new.moderateur := cardinality(coalesce(new.droits_moderation, '{}')) > 0;
+  return new;
+end $$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_sync_moderateur on profils;
+create trigger trg_sync_moderateur before insert or update of droits_moderation on profils
+  for each row execute function synchroniser_moderateur();
+
+grant select (droits_moderation) on profils to anon, authenticated;
+-- Volontairement hors des colonnes modifiables : nul ne s'accorde ses
+-- propres droits. Le passage obligé est accorder_droits().
+
+/** Le membre connecté détient-il ce domaine ? */
+create or replace function peut_moderer(p_domaine text) returns boolean as $$
+  select coalesce(
+    (select droits_moderation @> array[p_domaine]
+       from public.profils where id = auth.uid()), false);
+$$ language sql stable security definer set search_path = public;
+
+-- « est_moderateur() » garde son sens de porte d'entrée : il ouvre
+-- l'espace de modération, pas les actions, qui vérifient leur domaine.
+create or replace function est_moderateur() returns boolean as $$
+  select coalesce(
+    (select cardinality(droits_moderation) > 0
+       from public.profils where id = auth.uid()), false);
+$$ language sql stable security definer set search_path = public;
+
+-- Les politiques passent du pouvoir global au domaine concerné.
+drop policy if exists maj_annonce on annonces;
+create policy maj_annonce on annonces for update
+  using (vendeur_id = auth.uid() or peut_moderer('annonces'));
+drop policy if exists suppression_annonce on annonces;
+create policy suppression_annonce on annonces for delete
+  using (vendeur_id = auth.uid() or peut_moderer('annonces'));
+
+drop policy if exists maj_evenement on evenements;
+create policy maj_evenement on evenements for update
+  using (auteur_id = auth.uid() or peut_moderer('evenements'));
+drop policy if exists suppr_evenement on evenements;
+create policy suppr_evenement on evenements for delete
+  using (auteur_id = auth.uid() or peut_moderer('evenements'));
+
+drop policy if exists suppr_pub_evt on publications_evenement;
+create policy suppr_pub_evt on publications_evenement for delete
+  using (auteur_id = auth.uid() or peut_moderer('evenements'));
+
+drop policy if exists suppr_commentaire on commentaires;
+create policy suppr_commentaire on commentaires for delete
+  using (auteur_id = auth.uid() or peut_moderer('commentaires')
+    or auth.uid() = proprietaire_cible(cible_type, cible_id));
+
+drop policy if exists maj_profil on profils;
+create policy maj_profil on profils for update
+  using (auth.uid() = id or peut_moderer('membres'));
+
+-- Le journal s'ouvre à tout modérateur : voir ce que font les autres
+-- est ce qui rend le pouvoir supportable.
+create index if not exists idx_journal_mod_cible on journal_moderation (annonce_id);
+alter table journal_moderation add column if not exists genre text default 'annonce';
+
+/**
+ * Attribution des droits, réservée au domaine « droits ».
+ * On ne peut pas se retirer soi-même ce domaine : sans cette garde, une
+ * fausse manœuvre laisse le site sans personne pour en redonner.
+ */
+create or replace function accorder_droits(
+  p_profil uuid, p_droits text[], p_motif text
+) returns void as $$
+declare v_nom text; v_inconnus text[];
+begin
+  if not peut_moderer('droits') then
+    raise exception 'Action réservée à la modération.' using errcode = 'check_violation';
+  end if;
+  if coalesce(length(trim(p_motif)), 0) < 3 then
+    raise exception 'Un motif est obligatoire.' using errcode = 'check_violation';
+  end if;
+
+  select array_agg(d) into v_inconnus
+    from unnest(coalesce(p_droits, '{}')) d
+   where not (domaines_moderation() @> array[d]);
+  if v_inconnus is not null then
+    raise exception 'Domaine inconnu : %', array_to_string(v_inconnus, ', ')
+      using errcode = 'check_violation';
+  end if;
+
+  if p_profil = auth.uid() and not (coalesce(p_droits, '{}') @> array['droits']) then
+    raise exception 'Vous ne pouvez pas vous retirer la gestion des droits.'
+      using errcode = 'check_violation';
+  end if;
+
+  select prenom into v_nom from public.profils where id = p_profil;
+  if v_nom is null then
+    raise exception 'Membre introuvable.' using errcode = 'check_violation';
+  end if;
+
+  update public.profils
+     set droits_moderation = coalesce(p_droits, '{}'), updated_at = now()
+   where id = p_profil;
+
+  insert into public.journal_moderation
+    (moderateur_id, annonce_id, titre, vendeur_id, action, motif, genre)
+    values (auth.uid(), null, 'Droits de ' || v_nom, p_profil,
+      case when cardinality(coalesce(p_droits, '{}')) = 0 then 'retiree' else 'corrigee' end,
+      trim(p_motif), 'droits');
+
+  insert into public.notifications (profil_id, categorie, titre, apercu, lien, auteur_nom)
+    values (p_profil, 'compte',
+      case when cardinality(coalesce(p_droits, '{}')) = 0
+           then 'Vos droits de modération ont été retirés'
+           else 'Vos droits de modération ont changé' end,
+      case when cardinality(coalesce(p_droits, '{}')) = 0 then trim(p_motif)
+           else 'Domaines : ' || array_to_string(p_droits, ', ') end,
+      '/moderation', 'Modération');
+end $$ language plpgsql security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  TRI DE LA MODÉRATION
+--  Sept genres de contenus se publient sur le site. Ils se relisent
+--  au même endroit, un genre à la fois, avec la même exigence : un
+--  motif écrit, et une trace au journal.
+-- ═══════════════════════════════════════════════════════════════
+
+/** Quel droit commande quel genre de contenu. */
+create or replace function droit_du_genre(p_genre text) returns text as $$
+  select case p_genre
+    when 'annonce'     then 'annonces'
+    when 'evenement'   then 'evenements'
+    when 'mur'         then 'evenements'
+    when 'information' then 'informations'
+    when 'discussion'  then 'discussions'
+    when 'reponse'     then 'discussions'
+    when 'commentaire' then 'commentaires'
+  end;
+$$ language sql immutable;
+
+/**
+ * Les contenus d'un genre, sans filtre de rayon.
+ * La modération doit voir ce qui se publie partout, y compris ce qui
+ * est déjà retiré : c'est la seule façon de revenir sur une décision.
+ */
+create or replace function contenus_a_moderer(
+  p_genre text, p_recherche text default null, p_limite int default 60
+) returns table (
+  genre text, id uuid, titre text, extrait text, etat text,
+  auteur_id uuid, auteur_nom text, commune text, photos text[],
+  lien text, created_at timestamptz
+) as $$
+declare v_q text;
+begin
+  if droit_du_genre(p_genre) is null then
+    raise exception 'Genre inconnu.' using errcode = 'check_violation';
+  end if;
+  if not peut_moderer(droit_du_genre(p_genre)) then
+    raise exception 'Ce domaine ne vous est pas ouvert.' using errcode = 'check_violation';
+  end if;
+  v_q := nullif(trim(coalesce(p_recherche, '')), '');
+
+  if p_genre = 'evenement' then
+    return query
+      select 'evenement'::text, e.id, e.titre, left(coalesce(e.description, ''), 240),
+             case when e.annule then 'masque' else 'en_ligne' end::text,
+             e.auteur_id, coalesce(pr.raison_sociale, pr.prenom), e.commune, e.photos,
+             ('/evenements/' || e.id)::text, e.created_at
+        from evenements e join profils pr on pr.id = e.auteur_id
+       where v_q is null or e.titre ilike '%'||v_q||'%' or e.commune ilike '%'||v_q||'%'
+          or coalesce(pr.raison_sociale, pr.prenom) ilike '%'||v_q||'%'
+       order by e.created_at desc limit p_limite;
+
+  elsif p_genre = 'mur' then
+    return query
+      select 'mur'::text, m.id, coalesce(e.titre, 'Mur')::text, left(m.texte, 240), 'en_ligne'::text,
+             m.auteur_id, coalesce(pr.raison_sociale, pr.prenom), e.commune, m.photos,
+             ('/evenements/' || m.evenement_id)::text, m.created_at
+        from publications_evenement m
+        join profils pr on pr.id = m.auteur_id
+        left join evenements e on e.id = m.evenement_id
+       where v_q is null or m.texte ilike '%'||v_q||'%'
+          or coalesce(pr.raison_sociale, pr.prenom) ilike '%'||v_q||'%'
+       order by m.created_at desc limit p_limite;
+
+  elsif p_genre = 'information' then
+    return query
+      select 'information'::text, i.id, i.titre, left(i.texte, 240),
+             case when i.expire_le is not null and i.expire_le <= now()
+                  then 'masque' else 'en_ligne' end::text,
+             i.auteur_id, coalesce(pr.organisation_nom, pr.prenom), s.nom, i.photos,
+             ('/informations/' || i.id)::text, i.created_at
+        from publications_officielles i
+        join profils pr on pr.id = i.auteur_id
+        left join secteurs s on s.code_insee = i.secteur
+       where v_q is null or i.titre ilike '%'||v_q||'%' or i.texte ilike '%'||v_q||'%'
+          or coalesce(pr.organisation_nom, pr.prenom) ilike '%'||v_q||'%'
+       order by i.created_at desc limit p_limite;
+
+  elsif p_genre = 'discussion' then
+    return query
+      select 'discussion'::text, d.id, d.titre, left(d.texte, 240),
+             case when d.ferme then 'masque' else 'en_ligne' end::text,
+             d.auteur_id, coalesce(pr.raison_sociale, pr.prenom), s.nom, d.photos,
+             ('/bistrot/' || d.id)::text, d.created_at
+        from sujets d
+        join profils pr on pr.id = d.auteur_id
+        left join secteurs s on s.code_insee = d.secteur
+       where v_q is null or d.titre ilike '%'||v_q||'%' or d.texte ilike '%'||v_q||'%'
+          or coalesce(pr.raison_sociale, pr.prenom) ilike '%'||v_q||'%'
+       order by d.created_at desc limit p_limite;
+
+  elsif p_genre = 'reponse' then
+    return query
+      select 'reponse'::text, r.id, coalesce(d.titre, 'Réponse')::text, left(r.texte, 240), 'en_ligne'::text,
+             r.auteur_id, coalesce(pr.raison_sociale, pr.prenom), s.nom, r.photos,
+             ('/bistrot/' || r.sujet_id)::text, r.created_at
+        from reponses_sujet r
+        join profils pr on pr.id = r.auteur_id
+        left join sujets d on d.id = r.sujet_id
+        left join secteurs s on s.code_insee = d.secteur
+       where v_q is null or r.texte ilike '%'||v_q||'%'
+          or coalesce(pr.raison_sociale, pr.prenom) ilike '%'||v_q||'%'
+       order by r.created_at desc limit p_limite;
+
+  elsif p_genre = 'commentaire' then
+    return query
+      select 'commentaire'::text, c.id,
+             'Sous ' || case c.cible_type when 'annonce' then 'une annonce'
+                          when 'evenement' then 'un événement'
+                          else 'une information' end::text,
+             left(c.texte, 240),
+             case when c.masque then 'masque' else 'en_ligne' end::text,
+             c.auteur_id, coalesce(pr.raison_sociale, pr.prenom), null::text, '{}'::text[],
+             (case c.cible_type when 'annonce' then '/annonce/' when 'evenement' then '/evenements/'
+                  else '/informations/' end || c.cible_id)::text, c.created_at
+        from commentaires c join profils pr on pr.id = c.auteur_id
+       where v_q is null or c.texte ilike '%'||v_q||'%'
+          or coalesce(pr.raison_sociale, pr.prenom) ilike '%'||v_q||'%'
+       order by c.created_at desc limit p_limite;
+
+  else -- annonce
+    return query
+      select 'annonce'::text, a.id, a.titre, left(coalesce(a.description, ''), 240), a.statut::text,
+             a.vendeur_id, coalesce(pr.raison_sociale, pr.prenom), a.commune, a.photos,
+             '/annonce/' || a.id, a.created_at
+        from annonces a join profils pr on pr.id = a.vendeur_id
+       where v_q is null or a.titre ilike '%'||v_q||'%' or a.commune ilike '%'||v_q||'%'
+          or coalesce(pr.raison_sociale, pr.prenom) ilike '%'||v_q||'%'
+       order by a.created_at desc limit p_limite;
+  end if;
+end $$ language plpgsql stable security definer set search_path = public;
+
+/**
+ * Action de modération sur n'importe quel contenu.
+ * Tous les genres ne se masquent pas : une réponse du bistrot ou un
+ * message de mur n'ont pas d'état caché, on ne peut que les effacer.
+ * Mieux vaut le dire que faire semblant.
+ */
+create or replace function moderer_contenu(
+  p_genre text, p_id uuid, p_action text, p_motif text
+) returns void as $$
+declare v_titre text; v_auteur uuid;
+begin
+  if droit_du_genre(p_genre) is null then
+    raise exception 'Genre inconnu.' using errcode = 'check_violation';
+  end if;
+  if not peut_moderer(droit_du_genre(p_genre)) then
+    raise exception 'Ce domaine ne vous est pas ouvert.' using errcode = 'check_violation';
+  end if;
+  if coalesce(length(trim(p_motif)), 0) < 3 then
+    raise exception 'Un motif est obligatoire.' using errcode = 'check_violation';
+  end if;
+  if p_action not in ('masquee', 'supprimee', 'retablie') then
+    raise exception 'Action inconnue.' using errcode = 'check_violation';
+  end if;
+
+  if p_genre = 'annonce' then
+    perform moderer_annonce(p_id, p_action, p_motif);
+    return;
+  end if;
+
+  if p_genre = 'evenement' then
+    select titre, auteur_id into v_titre, v_auteur from evenements where id = p_id;
+    if p_action = 'supprimee' then delete from evenements where id = p_id;
+    else update evenements set annule = (p_action = 'masquee') where id = p_id;
+    end if;
+
+  elsif p_genre = 'information' then
+    select titre, auteur_id into v_titre, v_auteur from publications_officielles where id = p_id;
+    if p_action = 'supprimee' then delete from publications_officielles where id = p_id;
+    else update publications_officielles
+            set expire_le = case when p_action = 'masquee' then now() else null end,
+                updated_at = now()
+          where id = p_id;
+    end if;
+
+  elsif p_genre = 'discussion' then
+    select titre, auteur_id into v_titre, v_auteur from sujets where id = p_id;
+    if p_action = 'supprimee' then delete from sujets where id = p_id;
+    else update sujets set ferme = (p_action = 'masquee') where id = p_id;
+    end if;
+
+  elsif p_genre = 'reponse' then
+    select left(texte, 80), auteur_id into v_titre, v_auteur from reponses_sujet where id = p_id;
+    if p_action <> 'supprimee' then
+      raise exception 'Une réponse ne se masque pas : elle se supprime.'
+        using errcode = 'check_violation';
+    end if;
+    delete from reponses_sujet where id = p_id;
+
+  elsif p_genre = 'mur' then
+    select left(texte, 80), auteur_id into v_titre, v_auteur from publications_evenement where id = p_id;
+    if p_action <> 'supprimee' then
+      raise exception 'Un message de mur ne se masque pas : il se supprime.'
+        using errcode = 'check_violation';
+    end if;
+    delete from publications_evenement where id = p_id;
+
+  else -- commentaire
+    select left(texte, 80), auteur_id into v_titre, v_auteur from commentaires where id = p_id;
+    if p_action = 'supprimee' then delete from commentaires where id = p_id;
+    else perform masquer_commentaire(p_id, p_action = 'masquee', p_motif);
+    end if;
+  end if;
+
+  if v_titre is null then
+    raise exception 'Contenu introuvable.' using errcode = 'check_violation';
+  end if;
+
+  insert into public.journal_moderation
+    (moderateur_id, annonce_id, titre, vendeur_id, action, motif, genre)
+    values (auth.uid(), p_id, v_titre, v_auteur, p_action, trim(p_motif), p_genre);
+end $$ language plpgsql security definer set search_path = public;
+
+/** Combien de contenus par genre : les onglets affichent leur volume. */
+create or replace function volumes_moderation()
+returns table (genre text, total bigint) as $$
+  select * from (
+    select 'annonce'::text, count(*) from annonces
+    union all select 'evenement', count(*) from evenements
+    union all select 'information', count(*) from publications_officielles
+    union all select 'discussion', count(*) from sujets
+    union all select 'reponse', count(*) from reponses_sujet
+    union all select 'commentaire', count(*) from commentaires
+    union all select 'mur', count(*) from publications_evenement
+  ) t where est_moderateur();
+$$ language sql stable security definer set search_path = public;
+
+-- Chaque écran de modération se referme sur son domaine. Les
+-- définitions ci-dessous remplacent celles d'avant le découpage.
+create or replace function file_moderation()
+returns table (
+  genre text, id uuid, profil_id uuid, prenom text, email text,
+  detail text, secteur text, created_at timestamptz
+) as $$
+  select 'compte', p.id, p.id, p.prenom, u.email::text,
+         case p.role when 'pro' then 'Producteur professionnel'
+                     when 'amateur' then 'Jardinier amateur'
+                     else 'Acheteur' end,
+         s.nom, p.created_at
+    from profils p
+    join auth.users u on u.id = p.id
+    left join secteurs s on s.code_insee = p.secteur
+   where peut_moderer('comptes') and p.compte_valide = false and p.refus_motif is null
+  union all
+  select 'organisation', d.id, d.profil_id, p.prenom, d.email_officiel,
+         d.type || ' · ' || d.nom || coalesce(' · ' || d.fonction, ''),
+         s.nom, d.created_at
+    from demandes_organisation d
+    join profils p on p.id = d.profil_id
+    left join secteurs s on s.code_insee = p.secteur
+   where peut_moderer('comptes') and d.statut = 'en_attente'
+   order by 8;
+$$ language sql stable security definer set search_path = public;
+
+create or replace function profil_pour_moderation(p_profil uuid)
+returns setof profils as $$
+  select * from public.profils where peut_moderer('membres') and id = p_profil;
+$$ language sql stable security definer set search_path = public;
+
+/**
+ * L'annuaire des membres, réservé au domaine « membres ».
+ * On y voit l'adresse d'inscription : c'est ce qui permet de
+ * reconnaître un doublon ou une adresse jetable. Ni mot de passe, ni
+ * historique d'achat : la modération n'en a pas besoin.
+ */
+create or replace function membres_a_moderer(
+  p_recherche text default null, p_filtre text default 'tous', p_limite int default 80
+) returns table (
+  id uuid, prenom text, email text, role text, secteur_nom text,
+  avatar_url text, compte_valide boolean, refus_motif text,
+  pro_verifie boolean, organisation text, organisation_nom text,
+  organisation_verifiee boolean, droits text[], annonces bigint,
+  derniere_activite timestamptz, created_at timestamptz
+) as $$
+  select p.id, p.prenom, u.email::text, p.role::text, s.nom,
+         p.avatar_url, p.compte_valide, p.refus_motif,
+         p.pro_verifie, p.organisation, p.organisation_nom,
+         p.organisation_verifiee, p.droits_moderation,
+         (select count(*) from annonces a where a.vendeur_id = p.id),
+         greatest(p.updated_at, p.created_at), p.created_at
+    from profils p
+    join auth.users u on u.id = p.id
+    left join secteurs s on s.code_insee = p.secteur
+   where peut_moderer('membres')
+     and (nullif(trim(coalesce(p_recherche, '')), '') is null
+          or p.prenom ilike '%'||trim(p_recherche)||'%'
+          or u.email::text ilike '%'||trim(p_recherche)||'%'
+          or coalesce(p.raison_sociale, '') ilike '%'||trim(p_recherche)||'%'
+          or coalesce(p.organisation_nom, '') ilike '%'||trim(p_recherche)||'%'
+          or coalesce(s.nom, '') ilike '%'||trim(p_recherche)||'%')
+     and case p_filtre
+           when 'moderateurs'  then cardinality(p.droits_moderation) > 0
+           when 'en_attente'   then p.compte_valide = false and p.refus_motif is null
+           when 'refuses'      then p.refus_motif is not null
+           when 'organisations' then p.organisation is not null
+           when 'pros'         then p.role = 'pro'
+           else true
+         end
+   order by p.created_at desc
+   limit p_limite;
+$$ language sql stable security definer set search_path = public;
+
+-- ═══════════════════════════════════════════════════════════════
+--  APERÇU DES ALENTOURS
+--  Avant de créer un compte, on veut savoir s'il se passe quelque
+--  chose près de chez soi. Ces chiffres sont donc lisibles sans être
+--  inscrit — mais ils restent des chiffres : aucun contenu, aucun nom,
+--  aucune position précise ne sort du rayon.
+-- ═══════════════════════════════════════════════════════════════
+create or replace function apercu_alentours(
+  p_lat double precision, p_lon double precision, p_rayon_km int default 20
+) returns table (
+  communes bigint, membres bigint, producteurs bigint,
+  annonces bigint, evenements bigint, discussions bigint
+) as $$
+  with zone as (
+    select st_point(p_lon, p_lat)::geography as g,
+           least(greatest(coalesce(p_rayon_km, 20), 1), 100) * 1000 as m
+  )
+  select
+    (select count(*) from secteurs s, zone z where st_dwithin(s.geo, z.g, z.m)),
+    (select count(*) from profils p join secteurs s on s.code_insee = p.secteur, zone z
+      where st_dwithin(s.geo, z.g, z.m) and p.compte_valide),
+    (select count(*) from profils p join secteurs s on s.code_insee = p.secteur, zone z
+      where st_dwithin(s.geo, z.g, z.m) and p.compte_valide and p.role = 'pro'),
+    (select count(*) from annonces a, zone z
+      where st_dwithin(a.geo, z.g, z.m) and a.statut = 'en_ligne' and a.quantite > 0),
+    (select count(*) from evenements e, zone z
+      where st_dwithin(e.geo, z.g, z.m) and not e.annule and e.debut > now()),
+    (select count(*) from sujets d, zone z where st_dwithin(d.geo, z.g, z.m));
+$$ language sql stable security definer set search_path = public;
+
+grant execute on function apercu_alentours(double precision, double precision, int)
+  to anon, authenticated;
+
+-- Redéfinie ici, après peut_moderer() : une fonction SQL résout ses
+-- appels à la création, elle ne pouvait pas le faire plus haut.
+create or replace function annonces_a_moderer(p_recherche text default null, p_limite int default 60)
+returns table (
+  id uuid, titre text, description text, statut text, mode text,
+  prix numeric, unite text, quantite int, commune text, photos text[],
+  est_lot boolean, vendeur_id uuid, vendeur_prenom text, vendeur_role text,
+  illustration text, created_at timestamptz
+) as $$
+  select a.id, a.titre, a.description, a.statut::text, a.mode::text,
+         a.prix, a.unite, a.quantite, a.commune, a.photos,
+         a.est_lot, a.vendeur_id, coalesce(pr.raison_sociale, pr.prenom), pr.role::text,
+         coalesce(v.illustration, p.illustration, case when a.est_lot then 'bocal' end),
+         a.created_at
+    from annonces a
+    join profils pr on pr.id = a.vendeur_id
+    left join produits p on p.id = a.produit_id
+    left join varietes v on v.id = a.variete_id
+   where peut_moderer('annonces')
+     and (p_recherche is null or p_recherche = ''
+          or a.titre ilike '%' || p_recherche || '%'
+          or a.commune ilike '%' || p_recherche || '%'
+          or coalesce(pr.raison_sociale, pr.prenom) ilike '%' || p_recherche || '%')
+   order by a.created_at desc
    limit p_limite;
 $$ language sql stable security definer set search_path = public;

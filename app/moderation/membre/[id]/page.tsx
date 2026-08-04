@@ -5,12 +5,13 @@ import { BarreHaut, BarreBas } from '@/components/Navigation';
 import ModifierProfil from '@/app/profil/ModifierProfil';
 import Statuts from './Statuts';
 import type { Profil } from '@/lib/types';
+import { aLeDroit } from '@/lib/moderation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ProfilModere({ params }: { params: { id: string } }) {
   const { profil, secteur, sb } = await profilCourant();
-  if (!profil.moderateur) notFound();
+  if (!aLeDroit(profil, 'membres')) notFound();
 
   const { data } = await sb.rpc('profil_pour_moderation', { p_profil: params.id });
   const cible = (data?.[0] ?? null) as Profil | null;
@@ -20,7 +21,7 @@ export default async function ProfilModere({ params }: { params: { id: string } 
     <>
       <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />
       <div className="app has-tabbar"><div className="page page-form">
-        <Link href="/moderation" className="back">← Modération</Link>
+        <Link href="/moderation/membres" className="back">← Annuaire</Link>
 
         <div className="page-head">
           <h1>{cible.prenom}</h1>

@@ -1062,3 +1062,42 @@ select.inp:disabled{background-color:#F2F0E6;color:#9AA69C}
 .pub-choix b{display:block;font-size:.92rem;color:var(--forest)}
 .pub-choix span span{display:block;font-size:.78rem;color:var(--ink-soft);margin-top:1px}
 .pub-choix .btn{margin-top:6px}
+
+/* ── Modération : onglets de genre, droits, annuaire ─────────────── */
+.mod-onglets{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px}
+.mod-onglet{display:inline-flex;align-items:center;gap:4px;min-height:44px;
+  padding:0 15px;border-radius:999px;border:1.5px solid var(--line);
+  background:var(--paper);color:var(--forest);font-weight:600;font-size:.92rem}
+.mod-onglet:hover{border-color:var(--leaf)}
+.mod-onglet.on{background:var(--forest);border-color:var(--forest);color:var(--cream)}
+.mod-onglet.on .tiny{color:var(--cream);opacity:.75}
+.mod-onglet:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
+
+.mod-droits{display:flex;flex-wrap:wrap;gap:7px}
+
+.mod-droits-choix{display:grid;gap:8px;grid-template-columns:1fr}
+@media(min-width:640px){.mod-droits-choix{grid-template-columns:1fr 1fr}}
+.mod-droit{display:block;text-align:left;min-height:44px;padding:11px 13px;
+  border-radius:12px;border:1.5px solid var(--line);background:var(--paper);
+  color:var(--forest)}
+.mod-droit b{display:block;font-size:.95rem}
+.mod-droit span{display:block;font-size:.8rem;color:var(--ink-3);margin-top:2px;
+  line-height:1.35}
+.mod-droit:hover{border-color:var(--leaf)}
+.mod-droit.on{border-color:var(--leaf);background:rgba(111,168,58,.1)}
+.mod-droit.on b::after{content:' ·  accordé';font-weight:600;color:var(--leaf)}
+.mod-droit:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
+
+.th-rond{border-radius:50%;overflow:hidden}
+.th-rond .ferme-photo-vide{display:grid;place-items:center;width:100%;height:100%;
+  font-family:'Bricolage Grotesque';font-weight:800;background:var(--forest);
+  color:var(--cream)}
+
+/* ── Aperçu des alentours, avant l'inscription ───────────────────── */
+.alentours{display:grid;gap:10px;grid-template-columns:repeat(3,1fr);text-align:center}
+.alentours>div{padding:8px 4px;border-radius:12px;background:var(--paper);
+  border:1px solid var(--line)}
+.alentours b{display:block;font-family:'Bricolage Grotesque';font-size:1.35rem;
+  font-weight:800;color:var(--forest)}
+.alentours .tiny{display:block;line-height:1.25;margin-top:2px}
+@media(max-width:420px){.alentours{grid-template-columns:repeat(2,1fr)}}

@@ -30,6 +30,7 @@ export interface Profil {
   surface_ha?: number | null;
   specialites?: string | null;
   moderateur?: boolean;
+  droits_moderation?: string[] | null;
   organisation?: 'mairie' | 'association' | 'collectif' | null;
   organisation_nom?: string | null;
   organisation_verifiee?: boolean;

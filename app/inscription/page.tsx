@@ -21,6 +21,11 @@ interface Commune {
   centre: { coordinates: [number, number] };
 }
 
+interface Apercu {
+  communes: number; membres: number; producteurs: number;
+  annonces: number; evenements: number; discussions: number;
+}
+
 export default function Inscription() {
   const [etape, setEtape] = useState(0);
   const router = useRouter();
@@ -36,9 +41,12 @@ export default function Inscription() {
   const [resCp, setResCp] = useState<Commune[]>([]);
   const [chargeGeo, setChargeGeo] = useState(false);
 
+  const [localisation, setLocalisation] = useState<'' | 'cours' | 'refus' | 'echec'>('');
+
   // étape 2 — voisines
   const [voisines, setVoisines] = useState<{ nom: string; lat: number; lon: number; km: number }[]>([]);
   const [membres, setMembres] = useState(0);
+  const [apercu, setApercu] = useState<Apercu | null>(null);
 
   // étape 3 — compte
   const [prenom, setPrenom] = useState('');
@@ -101,6 +109,40 @@ export default function Inscription() {
     return () => clearTimeout(t);
   }, [cp]);
 
+  /**
+   * Localisation par le téléphone.
+   *
+   * La position ne quitte pas l'appareil autrement que pour demander à
+   * l'API Géo de l'État quelle commune la contient. Rien n'est enregistré :
+   * seul le code de la commune finira dans le profil, comme si elle avait
+   * été choisie à la main. Le refus est un cas normal, pas une erreur.
+   */
+  function meLocaliser() {
+    if (!navigator.geolocation) { setLocalisation('echec'); return; }
+    setLocalisation('cours'); setErreur('');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const r = await fetch(
+            `${GEO}/communes?lat=${latitude.toFixed(5)}&lon=${longitude.toFixed(5)}` +
+            '&fields=nom,code,centre,population&format=json'
+          ).then((x) => x.json());
+          const c = (r ?? []).find((x: any) => x.centre);
+          if (!c) { setLocalisation('echec'); return; }
+          setCommune(c);
+          setResCp([c]);
+          setCp(''); setRegion(''); setDep(''); setCommunes([]);
+          setLocalisation('');
+        } catch {
+          setLocalisation('echec');
+        }
+      },
+      (e) => setLocalisation(e.code === e.PERMISSION_DENIED ? 'refus' : 'echec'),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+  }
+
   /** Communes réellement à moins de 20 km, tous départements confondus. */
   async function chargerVoisines(c: Commune) {
     const [lon, lat] = c.centre.coordinates;
@@ -138,6 +180,14 @@ export default function Inscription() {
     const sb = creerClient();
     const { data } = await sb.from('secteurs').select('membres, attente').eq('code_insee', c.code).maybeSingle();
     setMembres((data?.membres ?? 0) + (data?.attente ?? 0));
+
+    // Ce qui existe déjà dans le rayon, en chiffres seulement : aucun
+    // contenu ne sort du rayon avant l'inscription, la règle vaut aussi
+    // pour un visiteur.
+    const { data: vue } = await sb.rpc('apercu_alentours', {
+      p_lat: lat, p_lon: lon, p_rayon_km: RAYON_DEFAUT,
+    });
+    setApercu((vue?.[0] ?? null) as Apercu | null);
   }
 
   async function creerCompte(e: React.FormEvent) {
@@ -223,6 +273,19 @@ export default function Inscription() {
         <h1>Où est votre secteur ?</h1>
         <p className="lede">L'application couvre toute la France. Vous ne verrez que les {RAYON_DEFAUT} km autour de chez vous.</p>
         {dots}
+
+        <button type="button" className="btn btn-s" onClick={meLocaliser}
+          disabled={localisation === 'cours'} style={{ marginBottom: 14 }}>
+          {localisation === 'cours' ? 'Localisation…' : 'Me localiser'}
+        </button>
+        <p className="tiny center" style={{ marginTop: -6, marginBottom: 16 }}>
+          {localisation === 'refus'
+            ? 'Localisation refusée. Choisissez votre commune ci-dessous.'
+            : localisation === 'echec'
+            ? "La position n'a pas pu être déterminée. Choisissez votre commune ci-dessous."
+            : 'Votre position sert uniquement à retrouver votre commune. Elle n’est pas conservée.'}
+        </p>
+
         <div className="field">
           <label htmlFor="cp">Chercher par code postal</label>
           <input className="inp" id="cp" inputMode="numeric" maxLength={5} placeholder="38390"
@@ -296,6 +359,25 @@ export default function Inscription() {
             <div><b>{RAYON_DEFAUT}</b><span className="tiny">km de rayon</span></div>
           </div>
         </div>
+        {apercu && (
+          <div className="card" style={{ marginTop: 12 }}>
+            <h3>Ce qu&apos;il y a autour</h3>
+            <div className="alentours" style={{ marginTop: 12 }}>
+              <div><b>{apercu.annonces}</b><span className="tiny">annonces en ligne</span></div>
+              <div><b>{apercu.producteurs}</b><span className="tiny">producteurs</span></div>
+              <div><b>{apercu.membres}</b><span className="tiny">membres actifs</span></div>
+              <div><b>{apercu.evenements}</b><span className="tiny">événements à venir</span></div>
+              <div><b>{apercu.discussions}</b><span className="tiny">discussions</span></div>
+              <div><b>{apercu.communes}</b><span className="tiny">communes couvertes</span></div>
+            </div>
+            <p className="tiny" style={{ marginTop: 12 }}>
+              {apercu.annonces + apercu.evenements + apercu.discussions === 0
+                ? 'Le secteur est encore vide. Vous y seriez parmi les premiers, et ce que vous publierez y sera visible tout de suite.'
+                : 'Le détail ne s’affiche qu’une fois le compte créé : la règle du rayon vaut aussi avant l’inscription.'}
+            </p>
+          </div>
+        )}
+
         <p className="tiny" style={{ marginTop: 12 }}>
           {membres > 0
             ? `${membres} voisin${membres > 1 ? 's' : ''} déjà inscrit${membres > 1 ? 's' : ''} sur ce secteur.`
