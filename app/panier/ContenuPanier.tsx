@@ -1,0 +1,411 @@
+'use client';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { usePanier } from '@/components/PanierContext';
+import { useToast } from '@/components/Toast';
+import { Illustration } from '@/components/Illustrations';
+import { creerClient } from '@/lib/supabase-client';
+import { eur, FRAIS_SERVICE, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
+
+interface Bon {
+  id: string;
+  code: string;
+  montant: number;
+  expire_le: string;
+}
+
+interface Casier {
+  id: string;
+  nom: string;
+  adresse: string;
+  horaires: string | null;
+  actif: boolean;
+  distance_km: number;
+}
+
+interface Relais {
+  id: string;
+  prenom: string;
+  relais_adresse: string | null;
+  relais_horaires: string | null;
+}
+
+type ModeRetrait = 'relais' | 'main_propre' | 'casier' | 'livraison';
+
+export default function ContenuPanier({
+  points, secteurCode, commune, relais, casiers,
+}: {
+  points: number; secteurCode: string | null; commune: string;
+  relais: Relais[]; casiers: Casier[];
+}) {
+  const { lignes, sousTotal, totalReference, modifier, vider } = usePanier();
+  const [bons, setBons] = useState<Bon[]>([]);
+  const [bonId, setBonId] = useState('');
+  const [retrait, setRetrait] = useState<ModeRetrait>(relais.length > 0 ? 'relais' : 'main_propre');
+  const [relaisId, setRelaisId] = useState(relais[0]?.id ?? '');
+  const [casierId, setCasierId] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+  const router = useRouter();
+  const toast = useToast();
+
+  // Le troc et le don sont gratuits, sans frais, pour toujours : les frais de
+  // service ne s'appliquent que s'il y a au moins un produit vendu dans le panier.
+  const aDesVentes = lignes.some((l) => l.mode === 'vente');
+  const fraisService = aDesVentes ? FRAIS_SERVICE : 0;
+
+  // Bons d'achat disponibles : non utilisés et non expirés.
+  useEffect(() => {
+    const sb = creerClient();
+    sb.from('bons_achat')
+      .select('id, code, montant, expire_le')
+      .eq('utilise', false)
+      .gt('expire_le', new Date().toISOString())
+      .order('expire_le', { ascending: true })
+      .then(({ data }) => setBons((data ?? []) as Bon[]));
+  }, []);
+
+  const bonChoisi = bons.find((b) => b.id === bonId) ?? null;
+  // Un bon ne peut pas dépasser le montant du panier : le reliquat est perdu,
+  // on prévient donc l'acheteur avant qu'il ne l'utilise.
+  const reduction = bonChoisi ? Math.min(bonChoisi.montant, sousTotal) : 0;
+  const total = Math.max(0, sousTotal - reduction) + fraisService;
+  const economie = totalReference - sousTotal;
+
+  const groupes = useMemo(() => {
+    const g: Record<string, typeof lignes> = {};
+    lignes.forEach((l) => { (g[l.vendeur_prenom] ||= []).push(l); });
+    return g;
+  }, [lignes]);
+
+  async function valider() {
+    if (!lignes.length) return;
+    if (retrait === 'relais' && !relaisId) { toast('Choisissez un point relais.'); return; }
+    if (retrait === 'casier') {
+      const c = casiers.find((x) => x.id === casierId);
+      if (!c) { toast('Choisissez un casier.'); return; }
+      if (!c.actif) { toast("Ce casier n'est pas encore en service."); return; }
+    }
+    if (retrait === 'livraison') { toast("La livraison n'est pas encore en service."); return; }
+    setEnvoi(true);
+    const sb = creerClient();
+
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { setEnvoi(false); router.push('/connexion'); return; }
+
+    const relaisChoisi = relais.find((r) => r.id === relaisId);
+    const casierChoisi = casiers.find((c) => c.id === casierId);
+    const adresse = retrait === 'relais' && relaisChoisi
+      ? `${relaisChoisi.relais_adresse}, ${commune}`
+      : retrait === 'casier' && casierChoisi
+        ? `${casierChoisi.nom}, ${casierChoisi.adresse}`
+        : 'Remise en main propre';
+
+    const { data: commande, error } = await sb.from('commandes').insert({
+      acheteur_id: user.id,
+      secteur: secteurCode,
+      sous_total: sousTotal,
+      reduction,
+      bon_id: bonChoisi?.id ?? null,
+      points_utilises: 0,
+      frais_service: fraisService,
+      total,
+      mode_retrait: retrait,
+      relais_id: retrait === 'relais' ? relaisId : null,
+      casier_id: retrait === 'casier' ? casierId : null,
+      adresse_retrait: adresse,
+      statut: 'confirmee',
+      paye_le: new Date().toISOString(),
+    }).select().single();
+
+    if (error || !commande) {
+      setEnvoi(false);
+      toast('Commande impossible. Réessayez.');
+      return;
+    }
+
+    const { error: eLignes } = await sb.from('lignes_commande').insert(
+      lignes.map((l) => ({
+        commande_id: commande.id,
+        annonce_id: l.annonce_id,
+        vendeur_id: l.vendeur_id,
+        titre: l.titre,
+        variete: l.variete,
+        photo: l.photo,
+        prix_unitaire: l.prix,
+        quantite: l.quantite,
+      }))
+    );
+
+    if (eLignes) {
+      // On annule la commande pour ne pas laisser d'orpheline en base.
+      await sb.from('commandes').update({ statut: 'annulee' }).eq('id', commande.id);
+      setEnvoi(false);
+      toast("Le détail de la commande n'a pas pu être enregistré.");
+      return;
+    }
+
+    // Décrémenter les stocks
+    await Promise.all(lignes.map(async (l) => {
+      const reste = Math.max(0, l.stock - l.quantite);
+      await sb.from('annonces')
+        .update({ quantite: reste, statut: reste === 0 ? 'epuise' : 'en_ligne' })
+        .eq('id', l.annonce_id);
+    }));
+
+    // Le bon est consommé : la condition « utilise = false » dans la requête
+    // empêche qu'il serve deux fois si deux onglets valident en même temps.
+    if (bonChoisi) {
+      const { error: eBon } = await sb.rpc('utiliser_bon', {
+        p_bon: bonChoisi.id, p_commande: commande.id,
+      });
+      if (eBon) {
+        // Le bon n'a pas pu être consommé : on ne fait pas cadeau de la
+        // réduction, on repasse la commande au montant plein.
+        await sb.from('commandes')
+          .update({ reduction: 0, bon_id: null, total: sousTotal + fraisService })
+          .eq('id', commande.id);
+        toast("Le bon d'achat n'a pas pu être appliqué : commande au tarif normal.");
+      }
+    }
+    // Les points ne sont crédités qu'à la confirmation du retrait :
+    // une commande jamais retirée ne doit rien rapporter.
+    vider();
+    toast('Commande confirmée');
+    router.push(`/commandes/${commande.id}`);
+    router.refresh();
+  }
+
+  if (!lignes.length) {
+    return (
+      <div className="page page-form"><div className="empty">
+        <Illustration nom="plant" className="e-ico" />
+        <h3>Votre panier est vide</h3>
+        <p>Composez un panier auprès de plusieurs voisins : vous ne paierez et ne vous déplacerez qu'une fois.</p>
+        <Link className="btn btn-p" href="/">Voir les annonces</Link>
+      </div></div>
+    );
+  }
+
+  return (
+    <div className="page page-form">
+      <div className="page-head">
+        <h1>Mon panier</h1>
+        <p>
+          {lignes.length} produit{lignes.length > 1 ? 's' : ''} chez {Object.keys(groupes).length}{' '}
+          vendeur{Object.keys(groupes).length > 1 ? 's' : ''} — un seul retrait.
+        </p>
+      </div>
+
+      {Object.entries(groupes).map(([vendeur, items]) => (
+        <div className="card" key={vendeur}>
+          <div className="grp-head">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6FA83A" strokeWidth="2.2">
+              <path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z" /><circle cx="12" cy="10" r="3" />
+            </svg>
+            {vendeur} · {items[0].commune}
+          </div>
+          {items.map((l) => (
+            <div className="line" key={l.annonce_id}>
+              <div className="th">
+                {l.photo ? <img src={l.photo} alt="" loading="lazy" /> : <Illustration />}
+              </div>
+              <div className="line-b">
+                <h4>{l.titre}</h4>
+                <p>
+                  {l.variete ? `${l.variete} · ` : ''}
+                  {l.mode === 'don' ? 'Don' : l.mode === 'troc' ? 'Troc' : `${eur(l.prix)} / ${l.unite}`}
+                </p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div className="qty">
+                  <button onClick={() => modifier(l.annonce_id, l.quantite - 1)} aria-label={`Diminuer la quantité de ${l.titre}`}>−</button>
+                  <span>{l.quantite}</span>
+                  <button aria-label={`Augmenter la quantité de ${l.titre}`}
+                    onClick={() => {
+                      if (l.quantite >= l.stock) { toast('Stock maximum atteint'); return; }
+                      modifier(l.annonce_id, l.quantite + 1);
+                    }}>+</button>
+                </div>
+                <p className="tiny" style={{ marginTop: 5 }}>
+                  {l.mode === 'vente' ? eur(l.prix * l.quantite) : '—'}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+
+      {economie > 0.05 && (
+        <div className="priceref" style={{ marginTop: 12 }}>
+          <b>Vous économisez {eur(economie)} par rapport à la grande surface</b>
+          <p>Sur la base des prix moyens constatés pour les mêmes produits.</p>
+        </div>
+      )}
+
+      {aDesVentes && (
+        <div className="card">
+          <h3>Mes bons d'achat</h3>
+          <p className="tiny" style={{ marginTop: 5 }}>
+            {points} points cumulés. {PALIER_POINTS} points se convertissent en un bon de{' '}
+            {eur(PALIER_EUROS)} depuis votre profil.
+          </p>
+          {bons.length > 0 ? (
+            <div className="var-list" style={{ marginTop: 12 }} role="group" aria-label="Bon d'achat à utiliser">
+              <button type="button" className={`var-btn${bonId === '' ? ' on' : ''}`} onClick={() => setBonId('')}>
+                <div><b>Ne pas utiliser de bon</b><span>Vos bons restent valables pour une prochaine commande.</span></div>
+              </button>
+              {bons.map((b) => (
+                <button key={b.id} type="button" className={`var-btn${bonId === b.id ? ' on' : ''}`}
+                  onClick={() => setBonId(b.id)}>
+                  <div>
+                    <b>{b.code} · {eur(b.montant)}</b>
+                    <span>Valable jusqu'au {new Date(b.expire_le).toLocaleDateString('fr-FR')}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="tiny" style={{ marginTop: 10 }}>
+              Aucun bon disponible. Le cumul de points est suspendu pendant la phase de construction.
+            </p>
+          )}
+          {bonChoisi && bonChoisi.montant > sousTotal && (
+            <p className="tiny" style={{ marginTop: 10, color: 'var(--bark)' }} aria-live="polite">
+              Ce bon vaut {eur(bonChoisi.montant)} et votre panier {eur(sousTotal)} : la différence
+              ne sera pas reportée sur une prochaine commande.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="card">
+        <div className="sum-row"><span>Sous-total</span><span>{eur(sousTotal)}</span></div>
+        {reduction > 0 && bonChoisi && (
+          <div className="sum-row disc">
+            <span>Bon d'achat {bonChoisi.code}</span><span>−{eur(reduction)}</span>
+          </div>
+        )}
+        <div className="sum-row">
+          <span>Frais de service</span>
+          <span>{aDesVentes ? eur(fraisService) : 'Aucun (troc et dons)'}</span>
+        </div>
+        <div className="sum-row total"><span>À payer</span><b>{eur(total)}</b></div>
+      </div>
+
+      <div className="field" style={{ marginTop: 16 }}>
+        <label id="retrait-label">Retrait ou livraison</label>
+        <div className="seg seg-4" role="group" aria-labelledby="retrait-label">
+          {relais.length > 0 && (
+            <button type="button" className={retrait === 'relais' ? 'on' : ''} onClick={() => setRetrait('relais')}>
+              Point relais
+            </button>
+          )}
+          <button type="button" className={retrait === 'main_propre' ? 'on' : ''} onClick={() => setRetrait('main_propre')}>
+            Main propre
+          </button>
+          <button type="button" className={retrait === 'casier' ? 'on' : ''} onClick={() => setRetrait('casier')}>
+            Casier frais
+          </button>
+          <button type="button" className={retrait === 'livraison' ? 'on' : ''} onClick={() => setRetrait('livraison')}>
+            Livraison
+          </button>
+        </div>
+
+        {retrait === 'relais' && (
+          relais.length > 0 ? (
+            <div className="var-list" style={{ marginTop: 10 }}>
+              {relais.map((r) => (
+                <button key={r.id} type="button"
+                  className={`var-btn${relaisId === r.id ? ' on' : ''}`}
+                  onClick={() => setRelaisId(r.id)}>
+                  <div>
+                    <b>Chez {r.prenom}</b>
+                    <span>{r.relais_adresse}{r.relais_horaires ? ` · ${r.relais_horaires}` : ''}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="tiny" style={{ marginTop: 8 }}>
+              Aucun point relais n'est encore disponible dans ce secteur.
+            </p>
+          )
+        )}
+
+        {retrait === 'casier' && (
+          <>
+            <p className="avert" style={{ marginTop: 10 }}>
+              Les casiers réfrigérés dépendent de partenariats en cours de
+              discussion. Aucun n'est en service pour le moment.
+            </p>
+            {casiers.length > 0 ? (
+              <div className="var-list" style={{ marginTop: 10 }}>
+                {casiers.map((c) => (
+                  <button key={c.id} type="button" disabled={!c.actif}
+                    className={`var-btn${casierId === c.id ? ' on' : ''}`}
+                    onClick={() => setCasierId(c.id)}>
+                    <div>
+                      <b>{c.nom} · à {c.distance_km} km</b>
+                      <span>
+                        {c.adresse}{c.horaires ? ` · ${c.horaires}` : ''}
+                        {!c.actif && ' · pas encore en service'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="tiny" style={{ marginTop: 8 }}>
+                Aucun casier n'est recensé dans votre rayon.
+              </p>
+            )}
+          </>
+        )}
+
+        {retrait === 'livraison' && (
+          <>
+            <p className="avert" style={{ marginTop: 10 }}>
+              La livraison à domicile n'est pas encore en service. Elle passera
+              par un transporteur partenaire, qui reste à désigner.
+            </p>
+            <div className="var-list" style={{ marginTop: 10 }}>
+              <button type="button" className="var-btn" disabled>
+                <div>
+                  <b>Transporteur partenaire</b>
+                  <span>Livraison le jour même, créneau au choix — à venir</span>
+                </div>
+              </button>
+              <button type="button" className="var-btn" disabled>
+                <div>
+                  <b>Tournée locale groupée</b>
+                  <span>Un passage par secteur, plusieurs commandes — à venir</span>
+                </div>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="avert" role="note">
+        <b>Commande de test. Aucune somme ne sera facturée ni encaissée.</b>
+        <p>
+          mon-petitpotager.com est en construction. Le paiement en ligne n&apos;est pas
+          branché, aucun prélèvement n&apos;est effectué, et aucune transaction
+          conclue ici n&apos;a de valeur commerciale. Les montants affichés servent
+          uniquement à éprouver le fonctionnement du service. Les courriels envoyés
+          à cette occasion portent le même avertissement.
+        </p>
+      </div>
+
+      <button className="btn btn-p" onClick={valider} disabled={envoi}>
+        {envoi ? 'Validation…' : `Valider ma commande de test — ${eur(total)}`}
+      </button>
+      <p className="tiny center" style={{ marginTop: 11 }}>
+        Le vendeur n&apos;est payé qu&apos;après votre confirmation de retrait.
+        Rien ne transite par le site : le règlement éventuel se fait de la main
+        à la main, entre vous et le vendeur.
+      </p>
+    </div>
+  );
+}

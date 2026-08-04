@@ -1,0 +1,131 @@
+import Link from 'next/link';
+import { profilCourant } from '@/lib/donnees';
+import { BarreHaut, BarreBas } from '@/components/Navigation';
+import { eur, PALIER_POINTS, PALIER_EUROS } from '@/lib/utils';
+import PanneauProfil from './PanneauProfil';
+import BonsAchat from './BonsAchat';
+import ModifierProfil from './ModifierProfil';
+import { MesAnnonces, Raccourcis, type AnnonceCourte } from './MesAnnonces';
+import { CompteEnAttente } from '@/components/CompteEnAttente';
+
+export const dynamic = 'force-dynamic';
+
+export default async function Profil() {
+  const { profil, secteur, sb } = await profilCourant();
+
+  const [{ count: nbAnnonces }, { count: nbCommandes }, { data: mouvements }] = await Promise.all([
+    sb.from('annonces').select('*', { count: 'exact', head: true })
+      .eq('vendeur_id', profil.id).neq('statut', 'retire'),
+    sb.from('commandes').select('*', { count: 'exact', head: true }).eq('acheteur_id', profil.id),
+    sb.from('mouvements_points').select('*').eq('profil_id', profil.id)
+      .order('created_at', { ascending: false }).limit(20),
+  ]);
+
+  const [{ data: annonces }, { data: nonLus }] = await Promise.all([
+    sb.from('annonces')
+      .select('id, titre, variete_libre, mode, prix, unite, quantite, statut, photos, est_lot, produit:produits(illustration), variete:varietes(nom, illustration)')
+      .eq('vendeur_id', profil.id)
+      .order('statut')
+      .order('created_at', { ascending: false })
+      .limit(5),
+    sb.rpc('messages_non_lus'),
+  ]);
+
+  const { data: bons } = await sb.from('bons_achat')
+    .select('id, code, montant, utilise, expire_le')
+    .eq('profil_id', profil.id)
+    .order('created_at', { ascending: false });
+
+  return (
+    <>
+      <BarreHaut commune={secteur?.nom ?? '—'} rayonKm={profil.rayon_km} />
+      <div className="app has-tabbar"><div className="page">
+        <div className="page-head" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {profil.avatar_url ? (
+            <img src={profil.avatar_url} alt="" loading="lazy" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+          ) : (
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center',
+              background: 'var(--leaf-soft)', color: 'var(--forest-2)', fontWeight: 700, fontSize: '1.3rem',
+            }}>{profil.prenom?.[0]?.toUpperCase()}</div>
+          )}
+          <div>
+            <h1>{profil.prenom}</h1>
+            <p>
+              {profil.role === 'pro' ? 'Producteur pro' : profil.role === 'amateur' ? 'Jardinier amateur' : 'Acheteur'}
+              {secteur && ` · ${secteur.nom}`}
+            </p>
+          </div>
+        </div>
+
+        {!profil.compte_valide && (
+          <CompteEnAttente refus={profil.refus_motif} />
+        )}
+
+        <Raccourcis
+          estPro={profil.role === 'pro'}
+          moderateur={!!profil.moderateur}
+          organisation={!!profil.organisation}
+          nbNonLus={typeof nonLus === 'number' ? nonLus : 0}
+        />
+
+        <div className="dash-top">
+          <div className="pts-card">
+            <small>MES POINTS</small>
+            <b>{profil.points}</b>
+            <small>{PALIER_POINTS} points = un bon de {eur(PALIER_EUROS)}</small>
+          </div>
+
+          <div className="card">
+            <div className="stats">
+              <div><b>{nbAnnonces ?? 0}</b><span className="tiny">annonces</span></div>
+              <div><b>{nbCommandes ?? 0}</b><span className="tiny">commandes</span></div>
+              <div><b>{secteur?.membres ?? 0}</b><span className="tiny">voisins</span></div>
+            </div>
+          </div>
+        </div>
+
+        <MesAnnonces annonces={(annonces ?? []) as unknown as AnnonceCourte[]}
+          total={nbAnnonces ?? 0} />
+
+        {profil.moderateur && (
+          <div className="card">
+            <h3>Modération</h3>
+            <p className="muted" style={{ marginTop: 7 }}>
+              Vous pouvez retirer, corriger ou supprimer n&apos;importe quelle
+              annonce du site. Chaque intervention est journalisée.
+            </p>
+            <Link className="btn btn-p" href="/moderation" style={{ marginTop: 14 }}>
+              Ouvrir la modération
+            </Link>
+          </div>
+        )}
+
+        <BonsAchat points={profil.points} bons={bons ?? []} />
+
+        <ModifierProfil profil={profil} />
+        <PanneauProfil profil={profil} secteur={secteur} />
+
+        <div className="card">
+          <h3>Historique des points</h3>
+          {mouvements?.length ? mouvements.map((m: any) => (
+            <div className="pts-log" key={m.id}>
+              <span>
+                {m.motif}<br />
+                <span className="tiny">
+                  {new Date(m.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                </span>
+              </span>
+              <b className={m.montant < 0 ? 'neg' : ''}>{m.montant > 0 ? '+' : ''}{m.montant}</b>
+            </div>
+          )) : <p className="muted" style={{ marginTop: 8 }}>Aucun mouvement pour l'instant.</p>}
+        </div>
+
+        <Link className="btn btn-s" href="/pourquoi" style={{ marginTop: 14 }}>
+          Pourquoi passer par l'application ?
+        </Link>
+      </div></div>
+      <BarreBas />
+    </>
+  );
+}

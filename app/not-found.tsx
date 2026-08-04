@@ -1,0 +1,21 @@
+import Link from 'next/link';
+import { Illustration } from '@/components/Illustrations';
+import { Marque } from '@/components/Marque';
+
+export default function IntrouvableGlobal() {
+  return (
+    <div className="onb">
+      <div className="onb-in">
+        <Link href="/" className="brand" style={{ fontSize: '1.7rem' }}>
+          <Marque hauteur={58} />
+        </Link>
+        <div className="empty" style={{ marginTop: 24 }}>
+          <Illustration nom="plant" className="e-ico" />
+          <h3>Cette page n'existe pas.</h3>
+          <p>Le lien est peut-être incorrect, ou l'annonce a été retirée entre-temps.</p>
+          <Link className="btn btn-p" href="/">Retour à l'accueil</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
